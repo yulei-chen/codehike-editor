@@ -1,7 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+import calloutSnippet from '../../../templates/snippets/callout.md?raw';
+import classnameSnippet from '../../../templates/snippets/classname.md?raw';
+import codeMentionsSnippet from '../../../templates/snippets/code-mentions.md?raw';
+import collapseSnippet from '../../../templates/snippets/collapse.md?raw';
+import copyButtonSnippet from '../../../templates/snippets/copy-button.md?raw';
+import diffSnippet from '../../../templates/snippets/diff.md?raw';
+import fileNameSnippet from '../../../templates/snippets/file-name.md?raw';
+import focusSnippet from '../../../templates/snippets/focus.md?raw';
+import foldSnippet from '../../../templates/snippets/fold.md?raw';
+import footnotesSnippet from '../../../templates/snippets/footnotes.md?raw';
+import languageSwitcherSnippet from '../../../templates/snippets/language-switcher.md?raw';
+import lineNumbersSnippet from '../../../templates/snippets/line-numbers.md?raw';
+import linkSnippet from '../../../templates/snippets/link.md?raw';
+import markSnippet from '../../../templates/snippets/mark.md?raw';
+import scrollycodingSnippet from '../../../templates/snippets/scrollycoding.md?raw';
+import slideshowSnippet from '../../../templates/snippets/slideshow.md?raw';
+import spotlightSnippet from '../../../templates/snippets/spotlight.md?raw';
+import tabsSnippet from '../../../templates/snippets/tabs.md?raw';
+import tokenTransitionsSnippet from '../../../templates/snippets/token-transitions.md?raw';
+import tooltipSnippet from '../../../templates/snippets/tooltip.md?raw';
+import transpileSnippet from '../../../templates/snippets/transpile.md?raw';
+import typescriptSnippet from '../../../templates/snippets/typescript.md?raw';
+import wordWrapSnippet from '../../../templates/snippets/word-wrap.md?raw';
+
 interface ComponentPickerProps {
-  onSelect: (snippet: string) => void;
+  onSelect: (snippet: string, componentName: string) => void;
   onClose: () => void;
 }
 
@@ -12,370 +36,33 @@ interface Template {
   snippet: string;
 }
 
-// Code Hike component templates with their MDX snippets
 const CODE_TEMPLATES: Template[] = [
-  {
-    name: 'callout',
-    displayName: 'Callout',
-    category: 'code',
-    snippet: `\`\`\`js
-const lorem = ipsum(dolor, sit)
-// !callout[/amet/] This is a callout
-const [amet, consectetur] = [0, 0]
-lorem.adipiscing((sed, elit) => {
-  if (sed) {
-    amet += elit
-  }
-})
-\`\`\``
-  },
-  {
-    name: 'classname',
-    displayName: 'ClassName',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !className[/important/] bg-yellow-200
-function example() {
-  // This is important
-  return "highlighted";
-}
-\`\`\``
-  },
-  {
-    name: 'code-mentions',
-    displayName: 'Code Mentions',
-    category: 'code',
-    snippet: `The <CodeMention code="useState" /> hook is used for state management.`
-  },
-  {
-    name: 'collapse',
-    displayName: 'Collapse',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !collapse[1:3]
-import React from 'react'
-import { useState } from 'react'
-import { useEffect } from 'react'
-
-function Component() {
-  return <div>Hello</div>
-}
-\`\`\``
-  },
-  {
-    name: 'copy-button',
-    displayName: 'Copy Button',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !copy
-const greeting = "Hello, World!";
-console.log(greeting);
-\`\`\``
-  },
-  {
-    name: 'diff',
-    displayName: 'Diff',
-    category: 'code',
-    snippet: `\`\`\`tsx
-function greet(name) {
--  console.log("Hello");
-+  console.log("Hello, " + name);
-}
-\`\`\``
-  },
-  {
-    name: 'file-name',
-    displayName: 'File Name',
-    category: 'code',
-    snippet: `\`\`\`tsx title="example.tsx"
-export function Example() {
-  return <div>Hello</div>;
-}
-\`\`\``
-  },
-  {
-    name: 'focus',
-    displayName: 'Focus',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !focus[1:3]
-import React from 'react'
-
-function Component() {
-  // This line is focused
-  return <div>Hello</div>
-}
-\`\`\``
-  },
-  {
-    name: 'fold',
-    displayName: 'Fold',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !fold[1:3]
-import React from 'react'
-import { useState } from 'react'
-import { useEffect } from 'react'
-
-function Component() {
-  return <div>Hello</div>
-}
-\`\`\``
-  },
-  {
-    name: 'footnotes',
-    displayName: 'Footnotes',
-    category: 'code',
-    snippet: `\`\`\`tsx
-function example() {
-  // !footnote[/useState/] React hook for state
-  const [count, setCount] = useState(0);
-  return count;
-}
-\`\`\``
-  },
-  {
-    name: 'language-switcher',
-    displayName: 'Language Switcher',
-    category: 'code',
-    snippet: `<LanguageSwitcher>
-
-\`\`\`js
-const greeting = "Hello";
-\`\`\`
-
-\`\`\`py
-greeting = "Hello"
-\`\`\`
-
-\`\`\`rb
-greeting = "Hello"
-\`\`\`
-
-</LanguageSwitcher>`
-  },
-  {
-    name: 'line-numbers',
-    displayName: 'Line Numbers',
-    category: 'code',
-    snippet: `\`\`\`tsx showLineNumbers
-function example() {
-  const x = 1;
-  const y = 2;
-  return x + y;
-}
-\`\`\``
-  },
-  {
-    name: 'link',
-    displayName: 'Link',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !link[/useState/] https://react.dev/reference/react/useState
-import { useState } from 'react';
-
-function Counter() {
-  const [count, setCount] = useState(0);
-  return <button onClick={() => setCount(count + 1)}>{count}</button>;
-}
-\`\`\``
-  },
-  {
-    name: 'mark',
-    displayName: 'Mark',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !mark[/important/]
-function example() {
-  // This is important
-  return "marked";
-}
-\`\`\``
-  },
-  {
-    name: 'tabs',
-    displayName: 'Tabs',
-    category: 'code',
-    snippet: `<Tabs>
-
-\`\`\`js title="JavaScript"
-const greeting = "Hello";
-\`\`\`
-
-\`\`\`ts title="TypeScript"
-const greeting: string = "Hello";
-\`\`\`
-
-</Tabs>`
-  },
-  {
-    name: 'token-transitions',
-    displayName: 'Token Transitions',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// Token transitions animate between code states
-const before = "hello";
-\`\`\`
-
-\`\`\`tsx
-// After the change
-const after = "world";
-\`\`\``
-  },
-  {
-    name: 'tooltip',
-    displayName: 'Tooltip',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// !tooltip[/useState/] A React hook for managing component state
-import { useState } from 'react';
-
-function Counter() {
-  const [count, setCount] = useState(0);
-  return count;
-}
-\`\`\``
-  },
-  {
-    name: 'transpile',
-    displayName: 'Transpile',
-    category: 'code',
-    snippet: `<Transpile>
-
-\`\`\`jsx title="JSX"
-function App() {
-  return <h1>Hello</h1>;
-}
-\`\`\`
-
-\`\`\`js title="JavaScript"
-function App() {
-  return React.createElement("h1", null, "Hello");
-}
-\`\`\`
-
-</Transpile>`
-  },
-  {
-    name: 'typescript',
-    displayName: 'TypeScript',
-    category: 'code',
-    snippet: `\`\`\`tsx
-// Hover over types to see TypeScript info
-interface User {
-  name: string;
-  age: number;
-}
-
-function greet(user: User): string {
-  return \`Hello, \${user.name}!\`;
-}
-\`\`\``
-  },
-  {
-    name: 'word-wrap',
-    displayName: 'Word Wrap',
-    category: 'code',
-    snippet: `\`\`\`tsx wordWrap
-// This is a very long line that will wrap automatically when it exceeds the container width, demonstrating the word wrap feature
-const longString = "This is another example of a very long string that needs to wrap";
-\`\`\``
-  }
+  { name: 'callout', displayName: 'Callout', category: 'code', snippet: calloutSnippet },
+  { name: 'classname', displayName: 'ClassName', category: 'code', snippet: classnameSnippet },
+  { name: 'code-mentions', displayName: 'Code Mentions', category: 'code', snippet: codeMentionsSnippet },
+  { name: 'collapse', displayName: 'Collapse', category: 'code', snippet: collapseSnippet },
+  { name: 'copy-button', displayName: 'Copy Button', category: 'code', snippet: copyButtonSnippet },
+  { name: 'diff', displayName: 'Diff', category: 'code', snippet: diffSnippet },
+  { name: 'file-name', displayName: 'File Name', category: 'code', snippet: fileNameSnippet },
+  { name: 'focus', displayName: 'Focus', category: 'code', snippet: focusSnippet },
+  { name: 'fold', displayName: 'Fold', category: 'code', snippet: foldSnippet },
+  { name: 'footnotes', displayName: 'Footnotes', category: 'code', snippet: footnotesSnippet },
+  { name: 'language-switcher', displayName: 'Language Switcher', category: 'code', snippet: languageSwitcherSnippet },
+  { name: 'line-numbers', displayName: 'Line Numbers', category: 'code', snippet: lineNumbersSnippet },
+  { name: 'link', displayName: 'Link', category: 'code', snippet: linkSnippet },
+  { name: 'mark', displayName: 'Mark', category: 'code', snippet: markSnippet },
+  { name: 'tabs', displayName: 'Tabs', category: 'code', snippet: tabsSnippet },
+  { name: 'token-transitions', displayName: 'Token Transitions', category: 'code', snippet: tokenTransitionsSnippet },
+  { name: 'tooltip', displayName: 'Tooltip', category: 'code', snippet: tooltipSnippet },
+  { name: 'transpile', displayName: 'Transpile', category: 'code', snippet: transpileSnippet },
+  { name: 'typescript', displayName: 'TypeScript', category: 'code', snippet: typescriptSnippet },
+  { name: 'word-wrap', displayName: 'Word Wrap', category: 'code', snippet: wordWrapSnippet },
 ];
 
 const LAYOUT_TEMPLATES: Template[] = [
-  {
-    name: 'scrollycoding',
-    displayName: 'Scrollycoding',
-    category: 'layout',
-    snippet: `<Scrollycoding>
-
-## Step 1
-
-First, we define our function.
-
-\`\`\`tsx
-function hello() {
-  console.log("Hello");
-}
-\`\`\`
-
-## Step 2
-
-Then, we add a parameter.
-
-\`\`\`tsx
-function hello(name) {
-  console.log("Hello, " + name);
-}
-\`\`\`
-
-## Step 3
-
-Finally, we return a value.
-
-\`\`\`tsx
-function hello(name) {
-  return "Hello, " + name;
-}
-\`\`\`
-
-</Scrollycoding>`
-  },
-  {
-    name: 'slideshow',
-    displayName: 'Slideshow',
-    category: 'layout',
-    snippet: `<Slideshow>
-
-\`\`\`tsx title="Step 1"
-const x = 1;
-\`\`\`
-
-\`\`\`tsx title="Step 2"
-const x = 1;
-const y = 2;
-\`\`\`
-
-\`\`\`tsx title="Step 3"
-const x = 1;
-const y = 2;
-const z = x + y;
-\`\`\`
-
-</Slideshow>`
-  },
-  {
-    name: 'spotlight',
-    displayName: 'Spotlight',
-    category: 'layout',
-    snippet: `<Spotlight>
-
-<SpotlightContent>
-
-## Introduction
-
-This is the spotlight layout. Click on different sections to highlight code.
-
-</SpotlightContent>
-
-<SpotlightCode>
-
-\`\`\`tsx
-function example() {
-  // !spotlight[1] intro
-  const greeting = "Hello";
-  // !spotlight[2] main
-  console.log(greeting);
-  // !spotlight[3] end
-  return greeting;
-}
-\`\`\`
-
-</SpotlightCode>
-
-</Spotlight>`
-  }
+  { name: 'scrollycoding', displayName: 'Scrollycoding', category: 'layout', snippet: scrollycodingSnippet },
+  { name: 'slideshow', displayName: 'Slideshow', category: 'layout', snippet: slideshowSnippet },
+  { name: 'spotlight', displayName: 'Spotlight', category: 'layout', snippet: spotlightSnippet },
 ];
 
 const ALL_TEMPLATES = [...CODE_TEMPLATES, ...LAYOUT_TEMPLATES];
@@ -491,7 +178,7 @@ export function ComponentPicker({ onSelect, onClose }: ComponentPickerProps) {
               {filteredTemplates.map((template) => (
                 <button
                   key={template.name}
-                  onClick={() => onSelect(template.snippet)}
+                  onClick={() => onSelect(template.snippet, template.name)}
                   className="p-3 bg-ch-bg border border-ch-border rounded-lg hover:border-ch-accent hover:bg-ch-accent/10 transition-colors text-left group"
                 >
                   <div className="flex items-center gap-2">

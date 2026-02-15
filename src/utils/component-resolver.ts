@@ -23,8 +23,9 @@ export async function findUserComponents(
 ): Promise<UserComponent[]> {
   const components: UserComponent[] = [];
 
-  // Look in common component directories
+  // Look in common component directories (annotations first for injected components)
   const searchPaths = [
+    'components/annotations',
     'app/components',
     'components',
     'src/components'
@@ -72,6 +73,8 @@ export async function hasUserComponent(
   const fileName = componentToFileName(componentName);
 
   const searchPaths = [
+    `components/annotations/${fileName}.tsx`,
+    `components/annotations/${fileName}.jsx`,
     `app/components/${fileName}.tsx`,
     `app/components/${fileName}.jsx`,
     `components/${fileName}.tsx`,

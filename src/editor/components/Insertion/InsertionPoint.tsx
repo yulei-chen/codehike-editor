@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ComponentPicker } from './ComponentPicker';
+import { useInjection } from '../../hooks/useInjection';
 
 interface InsertionPointProps {
   lineNumber: number;
@@ -8,11 +9,17 @@ interface InsertionPointProps {
 
 export function InsertionPoint({ lineNumber, onInsert }: InsertionPointProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const { inject } = useInjection();
 
-  const handleSelect = (snippet: string) => {
-    onInsert(lineNumber, snippet);
-    setShowPicker(false);
-  };
+  const handleSelect = useCallback(
+    async (snippet: string, componentName: string) => {
+      setShowPicker(false);
+      // Inject component into user's repo at components/annotations
+      await inject([componentName]);
+      onInsert(lineNumber, snippet);
+    },
+    [inject, lineNumber, onInsert]
+  );
 
   return (
     <div className="insertion-container group relative h-full min-h-6 flex items-center w-full">

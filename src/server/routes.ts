@@ -134,7 +134,7 @@ export function createRoutes(projectRoot: string): Router {
       }
 
       const templatesDir = join(__dirname, '..', 'templates');
-      const targetDir = join(projectRoot, 'app', 'components');
+      const targetDir = join(projectRoot, 'components', 'annotations');
 
       // Ensure target directory exists
       await fs.mkdir(targetDir, { recursive: true });
