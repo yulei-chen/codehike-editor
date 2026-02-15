@@ -2,16 +2,9 @@ import { Router, Request, Response } from 'express';
 import { promises as fs } from 'fs';
 import { join, relative, dirname } from 'path';
 import { glob } from 'glob';
-import { fileURLToPath } from 'url';
 import { detectComponents } from '../utils/component-detector.js';
 import { findUserComponents } from '../utils/component-resolver.js';
 import { ensureCodeComponent, isHandlerAlreadyAdded, ensureMdxRegistration, ensureCodeWrappers } from '../utils/code-component-manager.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// templates are at dist/templates (sibling of dist/server)
-const TEMPLATES_DIR = join(dirname(__dirname), 'templates');
-
 
 const HOVER_CSS_MARKER = '/* codehike:code-mentions */';
 const HOVER_CSS = `
@@ -81,8 +74,9 @@ async function ensureHoverStyles(projectRoot: string) {
   await fs.writeFile(cssPath, content + HOVER_CSS + matchRules + '\n', 'utf-8');
 }
 
-export function createRoutes(projectRoot: string): Router {
+export function createRoutes(projectRoot: string, templatesDir: string): Router {
   const router = Router();
+  const TEMPLATES_DIR = templatesDir;
 
   // GET /api/files - List all MDX files in /app directory
   router.get('/files', async (_req: Request, res: Response) => {
