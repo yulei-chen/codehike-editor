@@ -157,22 +157,13 @@ export function createRoutes(projectRoot: string): Router {
           // File doesn't exist, proceed with injection
         }
 
-        // Find the template
-        const codeTemplatePath = join(templatesDir, 'code', `${normalizedName}.tsx`);
-        const layoutTemplatePath = join(templatesDir, 'layouts', `${normalizedName}.tsx`);
-
-        let templatePath: string | null = null;
+        // Find the template (all templates are in templates/ root)
+        const templatePath = join(templatesDir, `${normalizedName}.tsx`);
         try {
-          await fs.access(codeTemplatePath);
-          templatePath = codeTemplatePath;
+          await fs.access(templatePath);
         } catch {
-          try {
-            await fs.access(layoutTemplatePath);
-            templatePath = layoutTemplatePath;
-          } catch {
-            failed.push(componentName);
-            continue;
-          }
+          failed.push(componentName);
+          continue;
         }
 
         // Copy template to user's project
@@ -192,39 +183,24 @@ export function createRoutes(projectRoot: string): Router {
     }
   });
 
+  // Layout template names (all other .tsx in templates/ are code templates)
+  const LAYOUT_TEMPLATE_NAMES = ['spotlight', 'slideshow', 'scrollycoding'];
+
   // GET /api/templates - List available Code Hike templates
   router.get('/templates', async (_req: Request, res: Response) => {
     try {
       const templatesDir = join(__dirname, '..', 'templates');
+      const files = await fs.readdir(templatesDir);
+      const allTemplates = files
+        .filter((f) => f.endsWith('.tsx'))
+        .map((f) => f.replace('.tsx', ''));
 
-      const codeTemplates: string[] = [];
-      const layoutTemplates: string[] = [];
-
-      // Read code templates
-      try {
-        const codeDir = join(templatesDir, 'code');
-        const codeFiles = await fs.readdir(codeDir);
-        codeTemplates.push(
-          ...codeFiles
-            .filter((f) => f.endsWith('.tsx'))
-            .map((f) => f.replace('.tsx', ''))
-        );
-      } catch {
-        // Directory might not exist
-      }
-
-      // Read layout templates
-      try {
-        const layoutDir = join(templatesDir, 'layouts');
-        const layoutFiles = await fs.readdir(layoutDir);
-        layoutTemplates.push(
-          ...layoutFiles
-            .filter((f) => f.endsWith('.tsx'))
-            .map((f) => f.replace('.tsx', ''))
-        );
-      } catch {
-        // Directory might not exist
-      }
+      const layoutTemplates = allTemplates.filter((name) =>
+        LAYOUT_TEMPLATE_NAMES.includes(name)
+      );
+      const codeTemplates = allTemplates.filter(
+        (name) => !LAYOUT_TEMPLATE_NAMES.includes(name)
+      );
 
       res.json({
         code: codeTemplates,
@@ -246,7 +222,7 @@ export function createRoutes(projectRoot: string): Router {
       }
 
       const templatesDir = join(__dirname, '..', 'templates');
-      const templatePath = join(templatesDir, type, `${name}.tsx`);
+      const templatePath = join(templatesDir, `${name}.tsx`);
 
       try {
         const content = await fs.readFile(templatePath, 'utf-8');
