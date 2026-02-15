@@ -1,29 +1,55 @@
 /* MDX Snippet:
-The <CodeMention code="useState" /> hook is used for state management.
+<HoverContainer>
+
+The [base case](hover:one) returns 1.
+
+```cpp
+int factorial(int n) {
+  if (n == 0) {
+    // !hover one
+    return 1;
+  } else {
+    // !hover two
+    return n * factorial(n - 1);
+  }
+}
+```
+
+The [recursive case](hover:two) multiplies something.
+
+</HoverContainer>
 */
 
-import React from 'react';
+import { AnnotationHandler, InnerLine } from "codehike/code"
+import React from "react"
 
-interface CodeMentionProps {
-  code: string;
-  language?: string;
+export function HoverContainer(props: { children: React.ReactNode }) {
+  return <div className="hover-container">{props.children}</div>
 }
 
-/**
- * CodeMention component for inline code references in prose
- * Renders code with syntax highlighting inline with text
- */
-export function CodeMention({ code, language = 'tsx' }: CodeMentionProps) {
-  return (
-    <code className="px-1.5 py-0.5 rounded bg-slate-800 text-sm font-mono text-blue-300">
-      {code}
-    </code>
-  );
+export function Link(props: { href?: string; children?: React.ReactNode }) {
+  if (props.href?.startsWith("hover:")) {
+    const hover = props.href.slice("hover:".length)
+    return (
+      <span
+        className="underline decoration-dotted underline-offset-4"
+        data-hover={hover}
+      >
+        {props.children}
+      </span>
+    )
+  }
+  return <a {...props} />
 }
 
-/**
- * CodeMentions wrapper for multiple code mentions
- */
-export function CodeMentions({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export const hover: AnnotationHandler = {
+  name: "hover",
+  onlyIfAnnotated: true,
+  Line: ({ annotation, ...props }) => (
+    <InnerLine
+      merge={props}
+      className="transition-opacity"
+      data-line={annotation?.query || ""}
+    />
+  ),
 }

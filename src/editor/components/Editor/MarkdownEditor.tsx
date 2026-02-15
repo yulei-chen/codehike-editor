@@ -12,7 +12,7 @@ import { InsertionPoint } from '../Insertion/InsertionPoint';
 
 type InjectionTipType = 'success' | 'error';
 
-interface LinePosition {
+interface LineInfo {
   lineNumber: number;
   top: number;
   height: number;
@@ -21,15 +21,12 @@ interface LinePosition {
 interface MarkdownEditorProps {
   content: string;
   onChange: (content: string) => void;
-  onInsert?: (position: number, text: string) => void;
 }
 
-export function MarkdownEditor({
-  content,
-  onChange,
-  onInsert
-}: MarkdownEditorProps) {
-  const [linePositions, setLinePositions] = useState<LinePosition[]>([]);
+export function MarkdownEditor({ content, onChange }: MarkdownEditorProps) {
+  const [allLines, setAllLines] = useState<LineInfo[]>([]);
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const [pickerLine, setPickerLine] = useState<number | null>(null);
   const [injectionTip, setInjectionTip] = useState<{
     message: string;
     type: InjectionTipType;
@@ -70,11 +67,12 @@ export function MarkdownEditor({
         ...lines.slice(lineNumber)
       ];
       onChange(newLines.join('\n'));
+      setPickerLine(null);
     },
     [content, onChange]
   );
 
-  // Custom theme matching our dark UI
+  // Custom theme matching our dark UI — hide default line numbers since we use overlay
   const theme = useMemo(
     () =>
       EditorView.theme({
@@ -94,7 +92,12 @@ export function MarkdownEditor({
         '.cm-gutters': {
           backgroundColor: '#1e1e2e',
           color: '#6c7086',
-          borderRight: '1px solid #313244'
+          borderRight: '1px solid #313244',
+          minWidth: '48px'
+        },
+        '.cm-lineNumbers .cm-gutterElement': {
+          paddingLeft: '24px',
+          paddingRight: '8px'
         },
         '.cm-activeLineGutter': {
           backgroundColor: 'rgba(137, 180, 250, 0.1)'
@@ -106,85 +109,42 @@ export function MarkdownEditor({
     []
   );
 
-  // Parse content to find paragraph gaps for insertion points
-  const insertionPoints = useMemo(() => {
-    const lines = content.split('\n');
-    const points: number[] = [];
-
-    // Add insertion point at the beginning
-    points.push(0);
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      const nextLine = lines[i + 1]?.trim();
-
-      // Add insertion point after empty lines that follow content
-      if (line === '' && i > 0 && lines[i - 1].trim() !== '') {
-        points.push(i);
-      }
-
-      // Add insertion point after paragraphs (non-empty line followed by empty line)
-      if (line !== '' && nextLine === '') {
-        points.push(i + 1);
-      }
-    }
-
-    // Add insertion point at the end
-    if (!points.includes(lines.length)) {
-      points.push(lines.length);
-    }
-
-    return [...new Set(points)].sort((a, b) => a - b);
-  }, [content]);
-
-  // Compute line positions when view is available
+  // Compute positions for every visible line
   const updateLinePositions = useCallback(() => {
     const view = viewRef.current;
     const overlay = overlayRef.current;
     if (!view || !overlay) return;
 
     const overlayRect = overlay.getBoundingClientRect();
-    const positions: LinePosition[] = [];
+    const lines: LineInfo[] = [];
 
     try {
       const { doc } = view.state;
-      for (const lineNum of insertionPoints) {
-        let pos: number;
-        let useTop = true;
-        if (lineNum === 0) {
-          pos = 0;
-        } else if (lineNum >= doc.lines) {
-          pos = doc.length;
-          useTop = false; // Use bottom of last line for end insertion
-        } else {
-          const line = doc.line(lineNum);
-          pos = line.from;
-        }
-
-        const block = view.lineBlockAt(Math.min(pos, doc.length));
-        const coords = view.coordsAtPos(pos, 1);
+      for (let i = 1; i <= doc.lines; i++) {
+        const line = doc.line(i);
+        const block = view.lineBlockAt(line.from);
+        const coords = view.coordsAtPos(line.from, 1);
         if (coords) {
-          const top = useTop
-            ? coords.top - overlayRect.top
-            : coords.bottom - overlayRect.top - 24;
-          positions.push({
-            lineNumber: lineNum,
-            top,
-            height: Math.max(block.height, 24)
+          lines.push({
+            lineNumber: i,
+            top: coords.top - overlayRect.top,
+            height: block.height
           });
         }
       }
-      setLinePositions(positions);
+      setAllLines(lines);
     } catch {
       // Ignore errors during initial render
     }
-  }, [insertionPoints]);
+  }, []);
 
-  const handleCreateEditor = useCallback((view: EditorView) => {
-    viewRef.current = view;
-    // Defer to next frame so layout is complete
-    requestAnimationFrame(() => updateLinePositions());
-  }, [updateLinePositions]);
+  const handleCreateEditor = useCallback(
+    (view: EditorView) => {
+      viewRef.current = view;
+      requestAnimationFrame(() => updateLinePositions());
+    },
+    [updateLinePositions]
+  );
 
   useEffect(() => {
     updateLinePositions();
@@ -211,6 +171,44 @@ export function MarkdownEditor({
     };
   }, [updateLinePositions]);
 
+  // Track hovered line via native mousemove on the editor DOM
+  const allLinesRef = useRef(allLines);
+  allLinesRef.current = allLines;
+  const pickerLineRef = useRef(pickerLine);
+  pickerLineRef.current = pickerLine;
+
+  useEffect(() => {
+    const view = viewRef.current;
+    const overlay = overlayRef.current;
+    if (!view || !overlay) return;
+
+    const editorDom = view.dom;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = overlay.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const lines = allLinesRef.current;
+      const found = lines.find((l) => y >= l.top && y < l.top + l.height);
+      setHoveredLine(found ? found.lineNumber : null);
+    };
+
+    const handleMouseLeave = (e: MouseEvent) => {
+      // Don't clear hover if mouse moved onto the overlay (the "+" button)
+      const relatedTarget = e.relatedTarget as Node | null;
+      if (relatedTarget && overlay.contains(relatedTarget)) return;
+      if (pickerLineRef.current !== null) return;
+      setHoveredLine(null);
+    };
+
+    editorDom.addEventListener('mousemove', handleMouseMove);
+    editorDom.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      editorDom.removeEventListener('mousemove', handleMouseMove);
+      editorDom.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [allLines.length > 0]);
+
   return (
     <div className="h-full flex flex-col relative">
       <div className="flex-1 overflow-hidden relative">
@@ -219,6 +217,7 @@ export function MarkdownEditor({
           onChange={handleChange}
           onCreateEditor={handleCreateEditor}
           extensions={[markdown(), theme]}
+          theme="dark"
           className="h-full"
           basicSetup={{
             lineNumbers: true,
@@ -231,26 +230,46 @@ export function MarkdownEditor({
             autocompletion: true
           }}
         />
-        {/* Overlay for insertion points - positioned over the editor, hover zones for gaps */}
+        {/* Overlay for per-line "+" buttons — pointer-events:none so clicks pass through to editor */}
         <div
           ref={overlayRef}
           className="absolute inset-0 pointer-events-none overflow-hidden"
+          style={{ zIndex: 5 }}
         >
-          {linePositions.map(({ lineNumber, top, height }) => (
+          {allLines.map(({ lineNumber, top, height }) => (
             <div
               key={lineNumber}
-              className="pointer-events-auto absolute left-0 right-0 flex items-center"
+              className="absolute left-0 flex items-center"
               style={{
                 top: `${top}px`,
                 height: `${height}px`,
-                minHeight: '24px'
+                width: '24px'
               }}
             >
-              <InsertionPoint
-                lineNumber={lineNumber}
-                onInsert={handleInsert}
-                onShowTip={showInjectionTip}
-              />
+              {(hoveredLine === lineNumber || pickerLine === lineNumber) && (
+                <div
+                  className="pointer-events-auto w-full flex items-center justify-center"
+                  onMouseLeave={(e) => {
+                    // Don't clear if mouse went back to editor (mousemove will handle it)
+                    // or if picker is open
+                    const relatedTarget = e.relatedTarget as Node | null;
+                    if (relatedTarget && viewRef.current?.dom.contains(relatedTarget)) return;
+                    if (pickerLine !== null) return;
+                    setHoveredLine(null);
+                  }}
+                >
+                  <InsertionPoint
+                    lineNumber={lineNumber}
+                    onInsert={handleInsert}
+                    onShowTip={showInjectionTip}
+                    onPickerOpen={() => setPickerLine(lineNumber)}
+                    onPickerClose={() => {
+                      setPickerLine(null);
+                      setHoveredLine(null);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

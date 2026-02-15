@@ -5,9 +5,79 @@ import { glob } from 'glob';
 import { fileURLToPath } from 'url';
 import { detectComponents } from '../utils/component-detector.js';
 import { findUserComponents } from '../utils/component-resolver.js';
+import { ensureCodeComponent, isHandlerAlreadyAdded, ensureMdxRegistration } from '../utils/code-component-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+
+const HOVER_CSS_MARKER = '/* codehike:code-mentions */';
+const HOVER_CSS = `
+${HOVER_CSS_MARKER}
+.hover-container [data-line] {
+  transition: opacity 0.2s;
+}
+.hover-container:has([data-hover]:hover) [data-line] {
+  opacity: 0.3;
+}
+.hover-container:has([data-hover]:hover) [data-line=""] {
+  opacity: 0.3;
+}
+`;
+
+// Generate CSS rules that restore opacity for matching hover names.
+// Uses CSS :has() — each hover name needs its own rule.
+function generateHoverMatchRules(names: string[]): string {
+  return names
+    .map(
+      (n) =>
+        `.hover-container:has([data-hover="${n}"]:hover) [data-line="${n}"] { opacity: 1; }`
+    )
+    .join('\n');
+}
+
+const DEFAULT_HOVER_NAMES = [
+  'one', 'two', 'three', 'four', 'five', 'six',
+  'seven', 'eight', 'nine', 'ten'
+];
+
+/**
+ * Append code-mentions hover CSS to the project's globals.css (or app/globals.css).
+ */
+async function ensureHoverStyles(projectRoot: string) {
+  // Try common global CSS locations
+  const candidates = [
+    join(projectRoot, 'app', 'globals.css'),
+    join(projectRoot, 'styles', 'globals.css'),
+    join(projectRoot, 'app', 'global.css'),
+  ];
+
+  let cssPath: string | null = null;
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      cssPath = candidate;
+      break;
+    } catch {
+      // Try next
+    }
+  }
+
+  if (!cssPath) {
+    // Create app/globals.css
+    cssPath = candidates[0];
+    await fs.mkdir(dirname(cssPath), { recursive: true });
+    await fs.writeFile(cssPath, '', 'utf-8');
+  }
+
+  const content = await fs.readFile(cssPath, 'utf-8');
+
+  // Already added
+  if (content.includes(HOVER_CSS_MARKER)) return;
+
+  const matchRules = generateHoverMatchRules(DEFAULT_HOVER_NAMES);
+  await fs.writeFile(cssPath, content + HOVER_CSS + matchRules + '\n', 'utf-8');
+}
 
 export function createRoutes(projectRoot: string): Router {
   const router = Router();
@@ -125,6 +195,11 @@ export function createRoutes(projectRoot: string): Router {
     }
   });
 
+  // Companion files that must be copied alongside a template
+  const COMPANION_FILES: Record<string, string[]> = {
+    'focus': ['focus.client.tsx'],
+  };
+
   // POST /api/inject - Inject selected components into user's project
   router.post('/inject', async (req: Request, res: Response) => {
     try {
@@ -147,14 +222,11 @@ export function createRoutes(projectRoot: string): Router {
         // Normalize component name to lowercase for file lookup
         const normalizedName = componentName.toLowerCase().replace(/\s+/g, '-');
 
-        // Check if user already has this component
-        const targetPath = join(targetDir, `${normalizedName}.tsx`);
-        try {
-          await fs.access(targetPath);
+        // Check if handler is already registered in code.tsx
+        const alreadyAdded = await isHandlerAlreadyAdded(targetDir, templatesDir, normalizedName);
+        if (alreadyAdded) {
           skipped.push(componentName);
           continue;
-        } catch {
-          // File doesn't exist, proceed with injection
         }
 
         // Find the template (all templates are in templates/ root)
@@ -162,21 +234,66 @@ export function createRoutes(projectRoot: string): Router {
         try {
           await fs.access(templatePath);
         } catch {
-          failed.push(templatePath);
+          failed.push(componentName, templatePath);
           continue;
         }
 
         // Copy template to user's project
+        const targetPath = join(targetDir, `${normalizedName}.tsx`);
         try {
           const templateContent = await fs.readFile(templatePath, 'utf-8');
           await fs.writeFile(targetPath, templateContent, 'utf-8');
           injected.push(componentName);
+
+          // Copy companion files if any
+          const companions = COMPANION_FILES[normalizedName];
+          if (companions) {
+            for (const companion of companions) {
+              const companionSrc = join(templatesDir, companion);
+              const companionDst = join(targetDir, companion);
+              try {
+                const companionContent = await fs.readFile(companionSrc, 'utf-8');
+                await fs.writeFile(companionDst, companionContent, 'utf-8');
+              } catch {
+                // Non-fatal: companion file missing
+              }
+            }
+          }
         } catch {
-          failed.push(targetPath);
+          failed.push(componentName, targetPath);
         }
       }
 
-      res.json({ injected, skipped, failed });
+      // All requested component names (including skipped ones)
+      const allRequestedNames = components.map((n: string) => n.toLowerCase().replace(/\s+/g, '-'));
+
+      // Auto-create/update code.tsx with annotation handler imports
+      const injectedFileNames = injected.map(name => name.toLowerCase().replace(/\s+/g, '-'));
+      let codeTsx: 'created' | 'updated' | 'unchanged' = 'unchanged';
+      try {
+        codeTsx = await ensureCodeComponent(targetDir, templatesDir, injectedFileNames);
+      } catch (err) {
+        console.error('Error managing code.tsx:', err);
+      }
+
+      // Auto-register MDX components (e.g. HoverContainer, Link) in mdx-components.tsx
+      let mdxRegistration: 'created' | 'updated' | 'unchanged' = 'unchanged';
+      try {
+        mdxRegistration = await ensureMdxRegistration(projectRoot, targetDir, allRequestedNames);
+      } catch (err) {
+        console.error('Error updating mdx-components.tsx:', err);
+      }
+
+      // Add hover CSS if code-mentions was requested
+      if (allRequestedNames.includes('code-mentions')) {
+        try {
+          await ensureHoverStyles(projectRoot);
+        } catch (err) {
+          console.error('Error adding hover styles:', err);
+        }
+      }
+
+      res.json({ injected, skipped, failed, codeTsx, mdxRegistration });
     } catch (error) {
       console.error('Error injecting components:', error);
       res.status(500).json({ error: 'Failed to inject components' });
