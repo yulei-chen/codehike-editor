@@ -21,7 +21,8 @@
     "src/templates"
   ],
   "scripts": {
-    "build": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist && cp -r src/templates/ dist/templates",
+    "build": "pnpm run build:server && pnpm run build:editor",
+    "build:server": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist && cp -r src/templates/ dist/templates",
     "build:editor": "vite build --config src/editor/vite.config.ts",
     "dev": "tsx src/cli/index.ts dev",
     "prepublishOnly": "pnpm run build",
