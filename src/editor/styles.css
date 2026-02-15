@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #585b70;
+}
+
+/* CodeMirror customizations */
+.cm-editor {
+  height: 100%;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cm-editor .cm-scroller {
+  overflow: auto;
+}
+
+.cm-editor .cm-content {
+  padding: 16px 0;
+}
+
+.cm-editor .cm-line {
+  padding: 0 16px;
+}
+
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+/* File tree hover effects */
+.file-item {
+  transition: background-color 0.15s ease;
+}
+
+.file-item:hover {
+  background-color: rgba(137, 180, 250, 0.1);
+}
+
+.file-item.selected {
+  background-color: rgba(137, 180, 250, 0.2);
+}
+
+/* Insertion point animation */
+.insertion-point {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.insertion-container:hover .insertion-point {
+  opacity: 1;
+}
+
+/* Modal backdrop */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+/* Component picker grid */
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}

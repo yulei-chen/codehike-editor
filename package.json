@@ -1,0 +1,77 @@
+{
+  "name": "codehike-editor",
+  "version": "0.1.0",
+  "description": "Visual editor for Code Hike-powered MDX content",
+  "type": "module",
+  "bin": {
+    "codehike-editor": "./bin/codehike-editor.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "bin",
+    "dist",
+    "src/templates"
+  ],
+  "scripts": {
+    "build": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist",
+    "build:editor": "vite build --config src/editor/vite.config.ts",
+    "dev": "tsx src/cli/index.ts dev",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "codehike",
+    "mdx",
+    "editor",
+    "markdown",
+    "visual-editor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.2.5",
+    "@codemirror/language-data": "^6.5.1",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.26.3",
+    "@uiw/react-codemirror": "^4.21.25",
+    "commander": "^12.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "glob": "^10.3.12",
+    "gray-matter": "^4.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.2.11"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "tsup": "^8.0.2",
+    "tsx": "^4.10.5",
+    "typescript": "^5.4.5"
+  },
+  "peerDependencies": {
+    "codehike": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "codehike": {
+      "optional": false
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
