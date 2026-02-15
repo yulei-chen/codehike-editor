@@ -5,6 +5,8 @@
 
 A visual editor for [Code Hike](https://codehike.org)-powered MDX content. Edit your MDX files with a editor and insert Code Hike components (focus, mark, collapse, etc.) with a single click.
 
+https://github.com/user-attachments/assets/aff27549-8b43-4e8c-a0f0-8c86c334177c
+
 ## Prerequisites
 
 Code Hike is installed with
@@ -40,10 +42,6 @@ Open two tabs: your site at **http://localhost:3000** and the editor at **http:/
 - Auto-registers MDX components in `mdx-components.tsx` when needed
 - Auto-saves on edit
 - Dependency prompts for components requiring external packages (e.g. shadcn/ui)
-
-## Usage
-
-
 
 ## Available Components (WIP)
 
