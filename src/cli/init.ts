@@ -88,24 +88,24 @@ export async function init() {
     console.log('✓ codehike-editor already in devDependencies\n');
   }
 
-  // Add editor script to package.json
+  // Add editor scripts to package.json
   const scripts = (packageJson.scripts as Record<string, string>) || {};
+  const updates: Record<string, string> = {};
 
   if (!scripts.editor) {
-    console.log('Adding "editor" script to package.json...');
+    updates.editor = 'codehike-editor start';
+    console.log('Adding "editor" script (codehike-editor start)...');
+  }
 
+  if (Object.keys(updates).length > 0) {
     const updatedPackageJson = {
       ...packageJson,
-      scripts: {
-        ...scripts,
-        editor: 'codehike-editor dev'
-      }
+      scripts: { ...scripts, ...updates }
     };
-
     writeFileSync(packageJsonPath, JSON.stringify(updatedPackageJson, null, 2) + '\n');
-    console.log('✓ "editor" script added\n');
+    console.log('✓ Scripts added\n');
   } else {
-    console.log('✓ "editor" script already exists\n');
+    console.log('✓ Editor scripts already exist\n');
   }
 
   // Detect package manager for final message
@@ -123,6 +123,7 @@ export async function init() {
   }
 
   console.log('Setup complete!\n');
-  console.log('Run the editor with:');
-  console.log(`  ${runCmd}\n`);
+  console.log('Run the editor:');
+  console.log(`  ${runCmd}          # production (pre-built)`);
+  console.log(`  ${runCmd.replace(' editor', ' editor:dev')}   # dev with HMR (when linked)\n`);
 }

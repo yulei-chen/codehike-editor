@@ -1,29 +1,45 @@
-import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createServer as createViteServer } from 'vite';
 import { createServer } from '../server/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-interface DevOptions {
+const packageRoot = join(__dirname, '..', '..');
+const editorRoot = join(packageRoot, 'src', 'editor');
+
+export interface ServerOptions {
   port: string;
 }
 
-export async function dev(options: DevOptions) {
+function listen(app: ReturnType<typeof createServer>, port: number, command: string) {
+  const server = app.listen(port, () => {
+    console.log(`\n  codehike-editor running at:\n`);
+    console.log(`  ➜  Local:   http://localhost:${port}/\n`);
+    console.log(`  Press Ctrl+C to stop\n`);
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\n  Error: Port ${port} is already in use.\n`);
+      console.error(`  Try running with a different port: codehike-editor ${command} -p ${port + 1}\n`);
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  return server;
+}
+
+/** Development: Vite + HMR from source. Use when linked for local dev. */
+export async function dev(options: ServerOptions) {
   const port = parseInt(options.port, 10);
   const projectRoot = process.cwd();
 
-  console.log('Starting codehike-editor...\n');
+  console.log('Starting codehike-editor (dev mode with HMR)...\n');
 
-  // Find the editor root directory (src/editor when running from dist/cli)
-  const packageRoot = join(__dirname, '..', '..');
-  const editorRoot = join(packageRoot, 'src', 'editor');
-
-  // Create Express server
   const app = createServer(projectRoot);
-
-  // Create Vite server in middleware mode
   const vite = await createViteServer({
     root: editorRoot,
     configFile: join(editorRoot, 'vite.config.ts'),
@@ -38,37 +54,18 @@ export async function dev(options: DevOptions) {
       'import.meta.env.VITE_PROJECT_ROOT': JSON.stringify(projectRoot)
     }
   });
-
-  // Use Vite's connect instance as middleware
   app.use(vite.middlewares);
 
-  // Start the server
-  const server = app.listen(port, () => {
-    console.log(`\n  codehike-editor running at:\n`);
-    console.log(`  ➜  Local:   http://localhost:${port}/\n`);
-    console.log(`  Press Ctrl+C to stop\n`);
-  });
+  const server = listen(app, port, 'dev');
 
-  server.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`\n  Error: Port ${port} is already in use.\n`);
-      console.error(`  Try running with a different port: codehike-editor dev -p ${port + 1}\n`);
-      process.exit(1);
-    }
-    throw err;
-  });
-
-  // Handle graceful shutdown
+  const shutdown = async () => {
+    await vite.close();
+    server.close();
+    process.exit(0);
+  };
   process.on('SIGINT', async () => {
     console.log('\nShutting down...');
-    await vite.close();
-    server.close();
-    process.exit(0);
+    await shutdown();
   });
-
-  process.on('SIGTERM', async () => {
-    await vite.close();
-    server.close();
-    process.exit(0);
-  });
+  process.on('SIGTERM', shutdown);
 }

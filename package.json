@@ -16,9 +16,7 @@
   },
   "files": [
     "bin",
-    "dist",
-    "src/editor",
-    "src/templates"
+    "dist"
   ],
   "scripts": {
     "build": "pnpm run build:server && pnpm run build:editor",
