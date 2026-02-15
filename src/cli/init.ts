@@ -124,6 +124,5 @@ export async function init() {
 
   console.log('Setup complete!\n');
   console.log('Run the editor:');
-  console.log(`  ${runCmd}          # production (pre-built)`);
-  console.log(`  ${runCmd.replace(' editor', ' editor:dev')}   # dev with HMR (when linked)\n`);
+  console.log(`  ${runCmd}  `);
 }

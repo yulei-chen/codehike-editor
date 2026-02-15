@@ -1,12 +1,16 @@
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, basename } from 'path';
 import express, { Express } from 'express';
 import cors from 'cors';
 import { createRoutes } from './routes.js';
 
-// Resolve templates from this entry file so path is correct when bundled (dist/server/index.js)
+// tsup bundles server code into dist/chunk-*.js, so __dirname can be dist/ or dist/server/
+// We need dist/templates in both cases
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TEMPLATES_DIR = join(__dirname, '..', 'templates');
+const TEMPLATES_DIR =
+  basename(__dirname) === 'server'
+    ? join(__dirname, '..', 'templates')
+    : join(__dirname, 'templates');
 
 export function createServer(projectRoot: string): Express {
   const app = express();
