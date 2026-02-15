@@ -76,7 +76,17 @@ export async function isHandlerAlreadyAdded(
 
   const exportNames = extractHandlerExports(templateContent);
   if (exportNames.length === 0) {
-    // Not an annotation handler template — don't skip based on code.tsx
+    // Not an annotation handler — check if it's a wrapper component already in code.tsx
+    const wrapper = CODE_WRAPPER_REGISTRY[normalizedName];
+    if (wrapper) {
+      const codeFilePath = join(targetDir, 'code.tsx');
+      try {
+        const codeContent = await fs.readFile(codeFilePath, 'utf-8');
+        return codeContent.includes(wrapper.importName);
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 
@@ -197,6 +207,84 @@ export async function ensureCodeComponent(
     await fs.writeFile(codeFilePath, updated, 'utf-8');
     return 'updated';
   }
+}
+
+interface CodeWrapperInfo {
+  fileName: string;
+  importName: string;
+  // Transform applied to code.tsx: wraps the return statement
+  wrapReturn: (preJsx: string) => string;
+}
+
+// Templates that modify the code.tsx return (wrapping <Pre>), not annotation handlers.
+const CODE_WRAPPER_REGISTRY: Record<string, CodeWrapperInfo> = {
+  'copy-button': {
+    fileName: 'copy-button',
+    importName: 'CopyButton',
+    wrapReturn: (preJsx: string) =>
+      `<div className="relative">\n      <CopyButton text={highlighted.code} />\n      ${preJsx}\n    </div>`,
+  },
+};
+
+/**
+ * Ensure code.tsx includes wrapper components (e.g. CopyButton) for requested templates.
+ * Adds import and wraps the <Pre> return.
+ */
+export async function ensureCodeWrappers(
+  targetDir: string,
+  requestedNames: string[]
+): Promise<'updated' | 'unchanged'> {
+  const wrappers: CodeWrapperInfo[] = [];
+  for (const name of requestedNames) {
+    const wrapper = CODE_WRAPPER_REGISTRY[name];
+    if (wrapper) wrappers.push(wrapper);
+  }
+  if (wrappers.length === 0) return 'unchanged';
+
+  const codeFilePath = join(targetDir, 'code.tsx');
+  let content: string;
+  try {
+    content = await fs.readFile(codeFilePath, 'utf-8');
+  } catch {
+    return 'unchanged'; // code.tsx doesn't exist yet
+  }
+
+  let changed = false;
+
+  for (const wrapper of wrappers) {
+    // Skip if already imported
+    if (content.includes(wrapper.importName)) continue;
+
+    changed = true;
+
+    // Add import
+    const importLine = `import { ${wrapper.importName} } from "./${wrapper.fileName}"`;
+    const lastImportIndex = content.lastIndexOf('\nimport ');
+    if (lastImportIndex !== -1) {
+      const endOfLine = content.indexOf('\n', lastImportIndex + 1);
+      content = content.slice(0, endOfLine) + '\n' + importLine + content.slice(endOfLine);
+    } else {
+      content = importLine + '\n' + content;
+    }
+
+    // Wrap the return: find `return <Pre .../>` or `return (\n    <Pre .../>\n  )`
+    // Match return with <Pre .../> (self-closing)
+    const returnPrePattern = /(return\s*(?:\(\s*)?)(<Pre\b[^]*?\/>)(\s*\)?)/;
+    const match = content.match(returnPrePattern);
+    if (match) {
+      const preJsx = match[2];
+      const wrapped = wrapper.wrapReturn(preJsx);
+      content = content.replace(
+        returnPrePattern,
+        `return (\n    ${wrapped}\n  )`
+      );
+    }
+  }
+
+  if (!changed) return 'unchanged';
+
+  await fs.writeFile(codeFilePath, content, 'utf-8');
+  return 'updated';
 }
 
 /**

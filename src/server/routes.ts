@@ -5,7 +5,7 @@ import { glob } from 'glob';
 import { fileURLToPath } from 'url';
 import { detectComponents } from '../utils/component-detector.js';
 import { findUserComponents } from '../utils/component-resolver.js';
-import { ensureCodeComponent, isHandlerAlreadyAdded, ensureMdxRegistration } from '../utils/code-component-manager.js';
+import { ensureCodeComponent, isHandlerAlreadyAdded, ensureMdxRegistration, ensureCodeWrappers } from '../utils/code-component-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -274,6 +274,13 @@ export function createRoutes(projectRoot: string): Router {
         codeTsx = await ensureCodeComponent(targetDir, templatesDir, injectedFileNames);
       } catch (err) {
         console.error('Error managing code.tsx:', err);
+      }
+
+      // Auto-add wrapper components (e.g. CopyButton) to code.tsx
+      try {
+        await ensureCodeWrappers(targetDir, allRequestedNames);
+      } catch (err) {
+        console.error('Error adding code wrappers:', err);
       }
 
       // Auto-register MDX components (e.g. HoverContainer, Link) in mdx-components.tsx
