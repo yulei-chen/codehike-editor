@@ -133,8 +133,8 @@ export function createRoutes(projectRoot: string): Router {
         return res.status(400).json({ error: 'Components array required' });
       }
 
-      const templatesDir = join(__dirname, '..', 'templates');
-      const targetDir = join(projectRoot, 'components', 'annotations');
+      const templatesDir = join(__dirname, '.', 'templates');
+      const targetDir = join(projectRoot, 'app','components');
 
       // Ensure target directory exists
       await fs.mkdir(targetDir, { recursive: true });
@@ -162,7 +162,7 @@ export function createRoutes(projectRoot: string): Router {
         try {
           await fs.access(templatePath);
         } catch {
-          failed.push(componentName);
+          failed.push(templatePath);
           continue;
         }
 
@@ -172,7 +172,7 @@ export function createRoutes(projectRoot: string): Router {
           await fs.writeFile(targetPath, templateContent, 'utf-8');
           injected.push(componentName);
         } catch {
-          failed.push(componentName);
+          failed.push(targetPath);
         }
       }
 
@@ -189,7 +189,7 @@ export function createRoutes(projectRoot: string): Router {
   // GET /api/templates - List available Code Hike templates
   router.get('/templates', async (_req: Request, res: Response) => {
     try {
-      const templatesDir = join(__dirname, '..', 'templates');
+      const templatesDir = join(__dirname, '.', 'templates');
       const files = await fs.readdir(templatesDir);
       const allTemplates = files
         .filter((f) => f.endsWith('.tsx'))
@@ -221,7 +221,7 @@ export function createRoutes(projectRoot: string): Router {
         return res.status(400).json({ error: 'Invalid template type' });
       }
 
-      const templatesDir = join(__dirname, '..', 'templates');
+      const templatesDir = join(__dirname, '.', 'templates');
       const templatePath = join(templatesDir, `${name}.tsx`);
 
       try {

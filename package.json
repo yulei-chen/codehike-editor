@@ -20,7 +20,7 @@
     "src/templates"
   ],
   "scripts": {
-    "build": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist",
+    "build": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist && cp -r src/templates/ dist/templates",
     "build:editor": "vite build --config src/editor/vite.config.ts",
     "dev": "tsx src/cli/index.ts dev",
     "typecheck": "tsc --noEmit"

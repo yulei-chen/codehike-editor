@@ -1,32 +1,3 @@
-/* MDX Snippet:
-<Spotlight>
-
-<SpotlightContent>
-
-## Introduction
-
-This is the spotlight layout. Click on different sections to highlight code.
-
-</SpotlightContent>
-
-<SpotlightCode>
-
-```tsx
-function example() {
-  // !spotlight[1] intro
-  const greeting = "Hello";
-  // !spotlight[2] main
-  console.log(greeting);
-  // !spotlight[3] end
-  return greeting;
-}
-```
-
-</SpotlightCode>
-
-</Spotlight>
-*/
-
 import React, { useState, createContext, useContext } from 'react';
 
 interface SpotlightContextValue {

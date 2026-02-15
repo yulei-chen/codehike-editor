@@ -1,24 +1,3 @@
-/* MDX Snippet:
-<Slideshow>
-
-```tsx title="Step 1"
-const x = 1;
-```
-
-```tsx title="Step 2"
-const x = 1;
-const y = 2;
-```
-
-```tsx title="Step 3"
-const x = 1;
-const y = 2;
-const z = x + y;
-```
-
-</Slideshow>
-*/
-
 import React, { useState, useCallback } from 'react';
 
 interface Slide {

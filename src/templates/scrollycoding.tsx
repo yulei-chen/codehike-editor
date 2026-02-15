@@ -1,39 +1,3 @@
-/* MDX Snippet:
-<Scrollycoding>
-
-## Step 1
-
-First, we define our function.
-
-```tsx
-function hello() {
-  console.log("Hello");
-}
-```
-
-## Step 2
-
-Then, we add a parameter.
-
-```tsx
-function hello(name) {
-  console.log("Hello, " + name);
-}
-```
-
-## Step 3
-
-Finally, we return a value.
-
-```tsx
-function hello(name) {
-  return "Hello, " + name;
-}
-```
-
-</Scrollycoding>
-*/
-
 import React, { useState, useEffect, useRef } from 'react';
 
 interface Step {
