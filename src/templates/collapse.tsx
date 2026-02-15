@@ -1,87 +1,110 @@
-/* MDX Snippet:
-```tsx
-// !collapse[1:3]
-import React from 'react'
-import { useState } from 'react'
-import { useEffect } from 'react'
+"use client"
 
-function Component() {
-  return <div>Hello</div>
-}
-```
-*/
-
-import React, { useState } from 'react';
-
-interface CollapseProps {
-  children: React.ReactNode;
-  defaultCollapsed?: boolean;
-  title?: string;
-}
+import React, { useState } from "react"
+import {
+  AnnotationHandler,
+  BlockAnnotation,
+  InnerLine,
+} from "codehike/code"
 
 /**
- * Collapse component for collapsible code sections
- * Allows hiding/showing portions of code
+ * Simple collapsible wrapper (no shadcn). Content is hidden when collapsed.
  */
-export function Collapse({
+function Collapsible({
   children,
-  defaultCollapsed = true,
-  title = 'Show collapsed code'
-}: CollapseProps) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-
-  if (collapsed) {
-    return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 py-1"
-      >
-        <svg
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-        {title}
-      </button>
-    );
-  }
-
+  trigger,
+  defaultOpen = false,
+}: {
+  children: React.ReactNode
+  trigger: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <div className="relative">
-      <button
-        onClick={() => setCollapsed(true)}
-        className="absolute -left-6 top-0 text-slate-400 hover:text-slate-200"
-      >
-        <svg
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex-shrink-0 p-0.5 text-slate-400 hover:text-slate-200 rounded"
+          aria-expanded={open}
         >
-          <path d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {children}
+          <ChevronIcon className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+        {trigger}
+      </div>
+      {open ? <div className="pl-5">{children}</div> : null}
     </div>
-  );
+  )
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
 }
 
 /**
- * Handler for collapse annotations in code blocks
- * Usage: // !collapse[startLine:endLine]
+ * Collapse annotation: fold/unfold blocks of code.
+ * Usage: // !collapse[fromLine:toLine] - first line is trigger, rest is content.
+ * Pass collapse, collapseTrigger, and collapseContent to Pre handlers.
  */
-export function handleCollapseAnnotation(
-  annotation: { fromLineNumber: number; toLineNumber: number },
-  children: React.ReactNode
-) {
-  return (
-    <Collapse title={`${annotation.toLineNumber - annotation.fromLineNumber + 1} lines collapsed`}>
-      {children}
-    </Collapse>
-  );
+export const collapse: AnnotationHandler = {
+  name: "collapse",
+  transform: (annotation: BlockAnnotation) => {
+    const { fromLineNumber } = annotation
+    return [
+      annotation,
+      {
+        ...annotation,
+        fromLineNumber,
+        toLineNumber: fromLineNumber,
+        name: "CollapseTrigger",
+      } as BlockAnnotation,
+      {
+        ...annotation,
+        fromLineNumber: fromLineNumber + 1,
+        name: "CollapseContent",
+      } as BlockAnnotation,
+    ]
+  },
+  Block: ({ children }) => {
+    const arr = React.Children.toArray(children)
+    const trigger = arr[0]
+    const content = arr.slice(1)
+    return (
+      <Collapsible defaultOpen={false} trigger={trigger}>
+        {content}
+      </Collapsible>
+    )
+  },
+}
+
+export const collapseTrigger: AnnotationHandler = {
+  name: "CollapseTrigger",
+  onlyIfAnnotated: true,
+  AnnotatedLine: (lineProps) => (
+    <div className="flex items-center gap-1">
+      <ChevronIcon className="w-4 h-4 flex-shrink-0 text-slate-400" />
+      <InnerLine merge={lineProps} {...lineProps} />
+    </div>
+  ),
+  Line: (lineProps) => (
+    <div className="flex items-center">
+      <InnerLine merge={lineProps} {...lineProps} />
+    </div>
+  ),
+}
+
+export const collapseContent: AnnotationHandler = {
+  name: "CollapseContent",
+  Block: ({ children }) => <div>{children}</div>,
 }

@@ -1,36 +1,16 @@
-/* MDX Snippet:
-```tsx
-// !className[/important/] bg-yellow-200
-function example() {
-  // This is important
-  return "highlighted";
-}
-```
-*/
-
-import React from 'react';
-
-interface ClassNameProps {
-  children: React.ReactNode;
-  className?: string;
-}
+import { AnnotationHandler } from "codehike/code"
 
 /**
  * ClassName annotation handler for Code Hike
- * Applies custom CSS classes to matched code tokens
- */
-export function ClassName({ children, className }: ClassNameProps) {
-  return <span className={className}>{children}</span>;
-}
-
-/**
- * Handler for className annotations in code blocks
  * Usage: // !className[/pattern/] classNames
+ * Applies custom CSS classes to matched code (annotation.data or query as class names)
  */
-export function handleClassNameAnnotation(
-  annotation: { query: string; data: string },
-  children: React.ReactNode
-) {
-  const className = annotation.data || 'bg-yellow-200/50';
-  return <ClassName className={className}>{children}</ClassName>;
+export const className: AnnotationHandler = {
+  name: "className",
+  Block: ({ annotation, children }) => (
+    <span className={annotation.data || annotation.query}>{children}</span>
+  ),
+  Inline: ({ annotation, children }) => (
+    <span className={annotation.data || annotation.query}>{children}</span>
+  ),
 }
