@@ -59,8 +59,8 @@ export async function init() {
     } else if (hasBunLock) {
       installCmd = 'bun add -D codehike-editor';
     } else {
-      // Default to pnpm
-      installCmd = 'pnpm add -D codehike-editor';
+      // Default to npm
+      installCmd = 'npm install -D codehike-editor';
     }
 
     try {
@@ -113,11 +113,13 @@ export async function init() {
   const hasPnpmLock = existsSync(join(cwd, 'pnpm-lock.yaml'));
   const hasBunLock = existsSync(join(cwd, 'bun.lockb'));
 
-  let runCmd = 'pnpm editor';
+  let runCmd = 'npm run editor';
   if (hasYarnLock) {
     runCmd = 'yarn editor';
   } else if (hasBunLock) {
     runCmd = 'bun run editor';
+  } else if (hasPnpmLock) {
+    runCmd = 'pnpm run editor';
   }
 
   console.log('Setup complete!\n');
