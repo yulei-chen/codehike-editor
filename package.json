@@ -6,23 +6,25 @@
   "bin": {
     "codehike-editor": "./bin/codehike-editor.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/server/index.js",
+  "types": "./dist/server/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
     }
   },
   "files": [
     "bin",
     "dist",
+    "src/editor",
     "src/templates"
   ],
   "scripts": {
     "build": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist && cp -r src/templates/ dist/templates",
     "build:editor": "vite build --config src/editor/vite.config.ts",
     "dev": "tsx src/cli/index.ts dev",
+    "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -30,10 +32,18 @@
     "mdx",
     "editor",
     "markdown",
-    "visual-editor"
+    "visual-editor",
+    "code-blocks",
+    "annotations",
+    "next.js"
   ],
-  "author": "",
+  "author": "yulei-chen",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yulei-chen/codehike-editor.git"
+  },
+  "homepage": "https://github.com/yulei-chen/codehike-editor#readme",
   "dependencies": {
     "@codemirror/lang-markdown": "^6.2.5",
     "@codemirror/language-data": "^6.5.1",

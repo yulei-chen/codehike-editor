@@ -9,6 +9,8 @@ import { ensureCodeComponent, isHandlerAlreadyAdded, ensureMdxRegistration, ensu
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+// templates are at dist/templates (sibling of dist/server)
+const TEMPLATES_DIR = join(dirname(__dirname), 'templates');
 
 
 const HOVER_CSS_MARKER = '/* codehike:code-mentions */';
@@ -208,7 +210,7 @@ export function createRoutes(projectRoot: string): Router {
         return res.status(400).json({ error: 'Components array required' });
       }
 
-      const templatesDir = join(__dirname, '.', 'templates');
+      const templatesDir = TEMPLATES_DIR;
       const targetDir = join(projectRoot, 'app','components');
 
       // Ensure target directory exists
@@ -313,7 +315,7 @@ export function createRoutes(projectRoot: string): Router {
   // GET /api/templates - List available Code Hike templates
   router.get('/templates', async (_req: Request, res: Response) => {
     try {
-      const templatesDir = join(__dirname, '.', 'templates');
+      const templatesDir = TEMPLATES_DIR;
       const files = await fs.readdir(templatesDir);
       const allTemplates = files
         .filter((f) => f.endsWith('.tsx'))
@@ -345,7 +347,7 @@ export function createRoutes(projectRoot: string): Router {
         return res.status(400).json({ error: 'Invalid template type' });
       }
 
-      const templatesDir = join(__dirname, '.', 'templates');
+      const templatesDir = TEMPLATES_DIR;
       const templatePath = join(templatesDir, `${name}.tsx`);
 
       try {
