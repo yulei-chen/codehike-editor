@@ -1,62 +1,34 @@
-"use client"
+/* MDX Snippet:
+```js
+// !collapse(1:4)
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : 1
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
 
-import React, { useState } from "react"
+// !collapse(1:4) collapsed
+function ipsum(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : 1
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
+import React from "react"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { ChevronDownIcon } from "lucide-react"
 import {
   AnnotationHandler,
   BlockAnnotation,
   InnerLine,
 } from "codehike/code"
 
-/**
- * Simple collapsible wrapper (no shadcn). Content is hidden when collapsed.
- */
-function Collapsible({
-  children,
-  trigger,
-  defaultOpen = false,
-}: {
-  children: React.ReactNode
-  trigger: React.ReactNode
-  defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="relative">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="flex-shrink-0 p-0.5 text-slate-400 hover:text-slate-200 rounded"
-          aria-expanded={open}
-        >
-          <ChevronIcon className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
-        </button>
-        {trigger}
-      </div>
-      {open ? <div className="pl-5">{children}</div> : null}
-    </div>
-  )
-}
-
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  )
-}
-
-/**
- * Collapse annotation: fold/unfold blocks of code.
- * Usage: // !collapse[fromLine:toLine] - first line is trigger, rest is content.
- * Pass collapse, collapseTrigger, and collapseContent to Pre handlers.
- */
 export const collapse: AnnotationHandler = {
   name: "collapse",
   transform: (annotation: BlockAnnotation) => {
@@ -65,46 +37,55 @@ export const collapse: AnnotationHandler = {
       annotation,
       {
         ...annotation,
-        fromLineNumber,
+        fromLineNumber: fromLineNumber,
         toLineNumber: fromLineNumber,
         name: "CollapseTrigger",
-      } as BlockAnnotation,
+      },
       {
         ...annotation,
         fromLineNumber: fromLineNumber + 1,
         name: "CollapseContent",
-      } as BlockAnnotation,
+      },
     ]
   },
-  Block: ({ children }) => {
-    const arr = React.Children.toArray(children)
-    const trigger = arr[0]
-    const content = arr.slice(1)
+  Block: ({ annotation, children }) => {
     return (
-      <Collapsible defaultOpen={false} trigger={trigger}>
-        {content}
+      <Collapsible defaultOpen={annotation.query !== "collapsed"}>
+        {children}
       </Collapsible>
     )
   },
 }
 
+const icon = (
+  <ChevronDownIcon
+    className="inline-block group-data-[state=closed]:-rotate-90 transition select-none opacity-30 group-data-[state=closed]:opacity-80 group-hover:!opacity-100 mb-0.5"
+    size={15}
+  />
+)
+
 export const collapseTrigger: AnnotationHandler = {
   name: "CollapseTrigger",
   onlyIfAnnotated: true,
-  AnnotatedLine: (lineProps) => (
-    <div className="flex items-center gap-1">
-      <ChevronIcon className="w-4 h-4 flex-shrink-0 text-slate-400" />
-      <InnerLine merge={lineProps} {...lineProps} />
-    </div>
+  AnnotatedLine: ({ annotation, ...props }) => (
+    <CollapsibleTrigger className="group contents">
+      <InnerLine merge={props} data={{ icon }} />
+    </CollapsibleTrigger>
   ),
-  Line: (lineProps) => (
-    <div className="flex items-center">
-      <InnerLine merge={lineProps} {...lineProps} />
-    </div>
-  ),
+  Line: (props) => {
+    const icon = props.data?.icon as React.ReactNode
+    return (
+      <div className="table-row">
+        <span className="w-5 text-center table-cell">{icon}</span>
+        <div className="table-cell">
+          <InnerLine merge={props} />
+        </div>
+      </div>
+    )
+  },
 }
 
 export const collapseContent: AnnotationHandler = {
   name: "CollapseContent",
-  Block: ({ children }) => <div>{children}</div>,
+  Block: CollapsibleContent,
 }
