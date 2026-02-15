@@ -10,6 +10,8 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 import { InsertionPoint } from '../Insertion/InsertionPoint';
 
+type InjectionTipType = 'success' | 'error';
+
 interface LinePosition {
   lineNumber: number;
   top: number;
@@ -28,8 +30,29 @@ export function MarkdownEditor({
   onInsert
 }: MarkdownEditorProps) {
   const [linePositions, setLinePositions] = useState<LinePosition[]>([]);
+  const [injectionTip, setInjectionTip] = useState<{
+    message: string;
+    type: InjectionTipType;
+  } | null>(null);
+  const injectionTipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const overlayRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+
+  const showInjectionTip = useCallback(
+    (message: string, type: InjectionTipType) => {
+      if (injectionTipTimeoutRef.current) {
+        clearTimeout(injectionTipTimeoutRef.current);
+      }
+      setInjectionTip({ message, type });
+      injectionTipTimeoutRef.current = setTimeout(() => {
+        setInjectionTip(null);
+        injectionTipTimeoutRef.current = null;
+      }, 4000);
+    },
+    []
+  );
 
   const handleChange = useCallback(
     (value: string) => {
@@ -226,11 +249,45 @@ export function MarkdownEditor({
               <InsertionPoint
                 lineNumber={lineNumber}
                 onInsert={handleInsert}
+                onShowTip={showInjectionTip}
               />
             </div>
           ))}
         </div>
       </div>
+      {injectionTip && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
+            injectionTip.type === 'success'
+              ? 'bg-ch-success/90 text-white'
+              : 'bg-ch-error/90 text-white'
+          }`}
+          role="status"
+        >
+          {injectionTip.type === 'success' ? (
+            <svg
+              className="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          ) : (
+            <svg
+              className="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          )}
+          {injectionTip.message}
+        </div>
+      )}
     </div>
   );
 }

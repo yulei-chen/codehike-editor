@@ -2,23 +2,45 @@ import React, { useState, useCallback } from 'react';
 import { ComponentPicker } from './ComponentPicker';
 import { useInjection } from '../../hooks/useInjection';
 
+type TipType = 'success' | 'error';
+
 interface InsertionPointProps {
   lineNumber: number;
   onInsert: (lineNumber: number, text: string) => void;
+  onShowTip?: (message: string, type: TipType) => void;
 }
 
-export function InsertionPoint({ lineNumber, onInsert }: InsertionPointProps) {
+export function InsertionPoint({
+  lineNumber,
+  onInsert,
+  onShowTip
+}: InsertionPointProps) {
   const [showPicker, setShowPicker] = useState(false);
   const { inject } = useInjection();
 
   const handleSelect = useCallback(
     async (snippet: string, componentName: string) => {
       setShowPicker(false);
-      // Inject component into user's repo at components/annotations
-      await inject([componentName]);
+      const result = await inject([componentName]);
       onInsert(lineNumber, snippet);
+
+      if (onShowTip) {
+        if (result.injected.length > 0) {
+          onShowTip(
+            `${result.injected[0]} added to components/annotations`,
+            'success'
+          );
+        } else if (result.skipped.length > 0) {
+          onShowTip(
+            `${result.skipped[0]} already in components/annotations`,
+            'success'
+          );
+        } else if (result.failed.length > 0) {
+          onShowTip(`Failed to add ${result.failed[0]}`, 'error');
+        }
+      }
     },
-    [inject, lineNumber, onInsert]
+    [inject, lineNumber, onInsert, onShowTip]
   );
 
   return (
