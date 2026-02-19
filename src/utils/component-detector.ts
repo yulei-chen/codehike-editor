@@ -1,7 +1,7 @@
 /**
  * Code Hike component names that we track
  */
-export const CODE_HIKE_COMPONENTS = [
+const CODE_HIKE_COMPONENTS = [
   'Callout',
   'ClassName',
   'CodeMentions',
@@ -28,7 +28,7 @@ export const CODE_HIKE_COMPONENTS = [
   'WordWrap'
 ] as const;
 
-export const CODE_HIKE_LAYOUTS = [
+const CODE_HIKE_LAYOUTS = [
   'Scrollycoding',
   'Slideshow',
   'Spotlight'
@@ -99,16 +99,3 @@ export function fileNameToComponent(fileName: string): string {
     .join('');
 }
 
-/**
- * Check if a component name is a Code Hike component
- */
-export function isCodeHikeComponent(name: string): boolean {
-  return ALL_CODE_HIKE_NAMES.includes(name as CodeHikeComponent | CodeHikeLayout);
-}
-
-/**
- * Check if a component is a layout
- */
-export function isLayout(name: string): boolean {
-  return CODE_HIKE_LAYOUTS.includes(name as CodeHikeLayout);
-}
