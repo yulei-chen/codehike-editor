@@ -1,40 +1,41 @@
+/* MDX Snippet:
+```js
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
 "use client"
 
 import { useState } from "react"
 
-/**
- * Copy button for code blocks. Use with Pre's copyButton prop:
- * <Pre ... copyButton={<CopyButton text={code} />} />
- * Usage matches CodeHike docs: CopyButton receives `text` (the raw code string).
- */
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
 
   return (
     <button
       type="button"
+      className="hover:bg-gray-400/20 p-1 rounded absolute top-1 right-1 text-zinc-200"
+      aria-label="Copy to clipboard"
       onClick={() => {
         void navigator.clipboard.writeText(text)
         setCopied(true)
         setTimeout(() => setCopied(false), 1200)
       }}
-      className="p-2 rounded-md transition-colors bg-slate-700 text-slate-300 hover:bg-slate-600 absolute top-2 right-2 opacity-0 group-hover:opacity-100"
-      title={copied ? "Copied!" : "Copy code"}
-      aria-label={copied ? "Copied!" : "Copy code"}
     >
-      {copied ? (
-        <CheckIcon className="w-4 h-4 text-green-400" />
-      ) : (
-        <CopyIcon className="w-4 h-4" />
-      )}
+      {copied ? <CheckIcon /> : <CopyIcon />}
     </button>
   )
 }
 
-function CopyIcon({ className }: { className?: string }) {
+function CopyIcon() {
   return (
     <svg
-      className={className}
+      width={16}
+      height={16}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -46,10 +47,11 @@ function CopyIcon({ className }: { className?: string }) {
   )
 }
 
-function CheckIcon({ className }: { className?: string }) {
+function CheckIcon() {
   return (
     <svg
-      className={className}
+      width={16}
+      height={16}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
