@@ -74,9 +74,8 @@ async function ensureHoverStyles(projectRoot: string) {
   await fs.writeFile(cssPath, content + HOVER_CSS + matchRules + '\n', 'utf-8');
 }
 
-export function createRoutes(projectRoot: string, templatesDir: string): Router {
+export function createRoutes(projectRoot: string): Router {
   const router = Router();
-  const TEMPLATES_DIR = templatesDir;
 
   // GET /api/files - List all MDX files in /app directory
   router.get('/files', async (_req: Request, res: Response) => {
@@ -204,8 +203,8 @@ export function createRoutes(projectRoot: string, templatesDir: string): Router 
         return res.status(400).json({ error: 'Components array required' });
       }
 
-      const templatesDir = TEMPLATES_DIR;
       const targetDir = join(projectRoot, 'app','components');
+      const templatesDir = join(projectRoot, 'node_modules', 'codehike-editor', 'dist', 'templates');
 
       // Ensure target directory exists
       await fs.mkdir(targetDir, { recursive: true });
@@ -309,7 +308,7 @@ export function createRoutes(projectRoot: string, templatesDir: string): Router 
   // GET /api/templates - List available Code Hike templates
   router.get('/templates', async (_req: Request, res: Response) => {
     try {
-      const templatesDir = TEMPLATES_DIR;
+      const templatesDir = join(projectRoot, 'node_modules', 'codehike-editor', 'dist', 'templates');
       const files = await fs.readdir(templatesDir);
       const allTemplates = files
         .filter((f) => f.endsWith('.tsx'))
@@ -341,7 +340,7 @@ export function createRoutes(projectRoot: string, templatesDir: string): Router 
         return res.status(400).json({ error: 'Invalid template type' });
       }
 
-      const templatesDir = TEMPLATES_DIR;
+      const templatesDir = join(projectRoot, 'node_modules', 'codehike-editor', 'dist', 'templates');
       const templatePath = join(templatesDir, `${name}.tsx`);
 
       try {

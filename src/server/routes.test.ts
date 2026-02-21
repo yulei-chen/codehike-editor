@@ -20,10 +20,10 @@ import { createRoutes } from './routes.js';
  *         - templates
  * */
 
-function createApp(projectRoot: string, templatesDir: string) {
+function createApp(projectRoot: string) {
   const app = express();
   app.use(express.json());
-  app.use('/api', createRoutes(projectRoot, templatesDir));
+  app.use('/api', createRoutes(projectRoot));
   return app;
 }
 
@@ -53,7 +53,7 @@ describe('routes', () => {
     it('returns MDX files from app/ dir', async () => {
       await fs.writeFile(join(projectRoot, 'app', 'page.mdx'), '# Hello', 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).get('/api/files');
 
       expect(res.status).toBe(200);
@@ -64,7 +64,7 @@ describe('routes', () => {
     it('handles missing app/ dir', async () => {
       await fs.rm(join(projectRoot, 'app'), { recursive: true, force: true });
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).get('/api/files');
 
       expect(res.status).toBe(200);
@@ -77,7 +77,7 @@ describe('routes', () => {
     it('reads file content', async () => {
       await fs.writeFile(join(projectRoot, 'app', 'page.mdx'), '# Hello', 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).get('/api/file/app/page.mdx');
 
       expect(res.status).toBe(200);
@@ -85,7 +85,7 @@ describe('routes', () => {
     });
 
     it('rejects path traversal attempts', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       // Express normalizes ../ in URL paths, so traversal attempts
       // result in the path not matching the /api/file/* route (404)
       const res = await request(app).get('/api/file/../../etc/passwd');
@@ -97,7 +97,7 @@ describe('routes', () => {
 
   describe('PUT /api/file/*', () => {
     it('writes file content', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app)
         .put('/api/file/app/page.mdx')
         .send({ content: '# Updated' });
@@ -110,7 +110,7 @@ describe('routes', () => {
     });
 
     it('rejects missing content (400)', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app)
         .put('/api/file/app/page.mdx')
         .send({});
@@ -121,7 +121,7 @@ describe('routes', () => {
 
   describe('POST /api/detect-components', () => {
     it('detects components in posted content', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app)
         .post('/api/detect-components')
         .send({ content: '<Focus>code</Focus>\n<Mark />' });
@@ -135,7 +135,7 @@ describe('routes', () => {
     const HANDLER_TEMPLATE = 'export const Focus: AnnotationHandler = { name: "focus" }';
 
     it('returns 400 when components is not an array', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: 'Focus' });
 
       expect(res.status).toBe(400);
@@ -144,7 +144,7 @@ describe('routes', () => {
     it('copies template file to app/components/', async () => {
       await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
 
       expect(res.status).toBe(200);
@@ -156,7 +156,7 @@ describe('routes', () => {
     it('creates code.tsx for annotation handler templates', async () => {
       await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
 
       expect(res.status).toBe(200);
@@ -173,7 +173,7 @@ describe('routes', () => {
         'utf-8'
       );
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
 
       expect(res.status).toBe(200);
@@ -190,7 +190,7 @@ describe('routes', () => {
         'utf-8'
       );
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
 
       expect(res.status).toBe(200);
@@ -199,7 +199,7 @@ describe('routes', () => {
     });
 
     it('adds to failed when template is not found', async () => {
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Unknown'] });
 
       expect(res.status).toBe(200);
@@ -211,7 +211,7 @@ describe('routes', () => {
       await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
       await fs.writeFile(join(templatesDir, 'focus.client.tsx'), '// focus client', 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       await request(app).post('/api/inject').send({ components: ['Focus'] });
 
       const companion = await fs.readFile(join(projectRoot, 'app', 'components', 'focus.client.tsx'), 'utf-8');
@@ -223,7 +223,7 @@ describe('routes', () => {
       await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
       await fs.writeFile(join(templatesDir, 'mark.tsx'), MARK_TEMPLATE, 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).post('/api/inject').send({ components: ['Focus', 'Mark'] });
 
       expect(res.status).toBe(200);
@@ -241,7 +241,7 @@ describe('routes', () => {
       await fs.writeFile(join(templatesDir, 'mark.tsx'), '', 'utf-8');
       await fs.writeFile(join(templatesDir, 'spotlight.tsx'), '', 'utf-8');
 
-      const app = createApp(projectRoot, templatesDir);
+      const app = createApp(projectRoot);
       const res = await request(app).get('/api/templates');
 
       expect(res.status).toBe(200);
