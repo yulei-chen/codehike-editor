@@ -1,13 +1,19 @@
+/* MDX Snippet:
+```js
+// !tooltip[/lorem/] A helper function
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  // !tooltip[/consectetur/] Returns an array or empty
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
 "use client"
 
 import { useState, useRef, useEffect } from "react"
 import { AnnotationHandler } from "codehike/code"
 
-/**
- * Tooltip annotation handler for Code Hike.
- * Usage: // !tooltip[/pattern/] or match tooltip content from block data (data.children).
- * data?.children can be MDX content when using CodeWithTooltips pattern.
- */
 export const tooltip: AnnotationHandler = {
   name: "tooltip",
   Inline: ({ annotation, children }) => {

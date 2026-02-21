@@ -1,74 +1,26 @@
 /* MDX Snippet:
 ```tsx wordWrap
-// This is a very long line that will wrap automatically when it exceeds the container width, demonstrating the word wrap feature
-const longString = "This is another example of a very long string that needs to wrap";
+// This is a very long comment that demonstrates word wrapping when it exceeds the container width
+const example = "This is a long string that demonstrates the word wrap feature in action"
 ```
 */
 
-import React from 'react';
+import { AnnotationHandler, InnerLine, InnerPre, InnerToken } from "codehike/code"
 
-interface WordWrapProps {
-  children: React.ReactNode;
-  enabled?: boolean;
-}
-
-/**
- * WordWrap component for code blocks with word wrapping
- */
-export function WordWrap({ children, enabled = true }: WordWrapProps) {
-  return (
-    <div
-      className={`
-        ${enabled ? 'whitespace-pre-wrap break-words' : 'whitespace-pre overflow-x-auto'}
-      `}
-    >
-      {children}
-    </div>
-  );
-}
-
-/**
- * CodeWithWordWrap wrapper component
- */
-export function CodeWithWordWrap({
-  children,
-  wordWrap = false
-}: {
-  children: React.ReactNode;
-  wordWrap?: boolean;
-}) {
-  return (
-    <pre
-      className={`
-        p-4 bg-slate-900 rounded-lg font-mono text-sm
-        ${wordWrap ? 'whitespace-pre-wrap break-words' : 'overflow-x-auto'}
-      `}
-    >
-      <code>{children}</code>
-    </pre>
-  );
-}
-
-/**
- * Pre component with optional word wrap
- */
-export function Pre({
-  children,
-  wordWrap = false,
-  className = ''
-}: {
-  children: React.ReactNode;
-  wordWrap?: boolean;
-  className?: string;
-}) {
-  return (
-    <pre
-      className={`
-        ${wordWrap ? 'whitespace-pre-wrap break-words' : 'whitespace-pre overflow-x-auto'}
-        ${className}
-      `}
-    >
-      {children}
-    </pre>
-  );
+export const wordWrap: AnnotationHandler = {
+  name: "word-wrap",
+  Pre: (props) => <InnerPre merge={props} className="whitespace-pre-wrap" />,
+  Line: (props) => (
+    <InnerLine merge={props}>
+      <div
+        style={{
+          textIndent: `${-props.indentation}ch`,
+          marginLeft: `${props.indentation}ch`,
+        }}
+      >
+        {props.children}
+      </div>
+    </InnerLine>
+  ),
+  Token: (props) => <InnerToken merge={props} style={{ textIndent: 0 }} />,
 }

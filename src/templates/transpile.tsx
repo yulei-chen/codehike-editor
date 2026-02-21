@@ -1,123 +1,52 @@
 /* MDX Snippet:
-<Transpile>
+```ts
+interface Greeter {
+  greet(): string
+}
 
-```jsx title="JSX"
-function App() {
-  return <h1>Hello</h1>;
+function sayHello(greeter: Greeter) {
+  console.log(greeter.greet())
 }
 ```
-
-```js title="JavaScript"
-function App() {
-  return React.createElement("h1", null, "Hello");
-}
-```
-
-</Transpile>
 */
 
-import React, { useState } from 'react';
+import { RawCode, Pre, highlight } from "codehike/code"
+import ts from "typescript"
 
-interface TranspileProps {
-  children: React.ReactNode;
-  defaultView?: 'source' | 'compiled';
-}
+// Note: Requires TypeScript package: npm install typescript
+// This is a React Server Component (RSC)
+export async function Transpile({ codeblock }: { codeblock: RawCode }) {
+  const result = ts.transpileModule(codeblock.value, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ESNext,
+    },
+  })
 
-/**
- * Transpile component for showing source vs compiled code
- */
-export function Transpile({
-  children,
-  defaultView = 'source'
-}: TranspileProps) {
-  const [view, setView] = useState(defaultView);
-
-  const childArray = React.Children.toArray(children).filter(
-    (child): child is React.ReactElement => React.isValidElement(child)
-  );
-
-  const sourceCode = childArray[0];
-  const compiledCode = childArray[1];
-
-  const sourceTitle = sourceCode?.props?.title || 'Source';
-  const compiledTitle = compiledCode?.props?.title || 'Compiled';
+  const [tsHighlighted, jsHighlighted] = await Promise.all([
+    highlight(codeblock, "github-dark"),
+    highlight(
+      { ...codeblock, value: result.outputText, lang: "js" },
+      "github-dark",
+    ),
+  ])
 
   return (
-    <div className="rounded-lg overflow-hidden border border-slate-700">
-      {/* Toggle header */}
-      <div className="flex bg-slate-800 border-b border-slate-700">
-        <button
-          onClick={() => setView('source')}
-          className={`
-            flex-1 px-4 py-2 text-sm font-medium transition-colors
-            ${
-              view === 'source'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-            }
-          `}
-        >
-          {sourceTitle}
-        </button>
-        <div className="w-px bg-slate-700" />
-        <button
-          onClick={() => setView('compiled')}
-          className={`
-            flex-1 px-4 py-2 text-sm font-medium transition-colors
-            ${
-              view === 'compiled'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-            }
-          `}
-        >
-          {compiledTitle}
-        </button>
-      </div>
-
-      {/* Arrow indicator */}
-      <div className="flex items-center justify-center py-1 bg-slate-800 text-slate-500">
-        <svg
-          className="w-4 h-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      </div>
-
-      {/* Code content */}
-      <div className="bg-slate-900">
-        {view === 'source' ? sourceCode : compiledCode}
+    <div className="rounded-lg overflow-hidden border border-zinc-700">
+      <div className="grid grid-cols-2 divide-x divide-zinc-700">
+        <div>
+          <div className="px-4 py-2 bg-zinc-800 border-b border-zinc-700 text-xs text-zinc-400">
+            TypeScript
+          </div>
+          <Pre code={tsHighlighted} className="m-0 px-4 py-3 bg-zinc-950 text-sm" />
+        </div>
+        <div>
+          <div className="px-4 py-2 bg-zinc-800 border-b border-zinc-700 text-xs text-zinc-400">
+            JavaScript
+          </div>
+          <Pre code={jsHighlighted} className="m-0 px-4 py-3 bg-zinc-950 text-sm" />
+        </div>
       </div>
     </div>
-  );
-}
-
-/**
- * TranspileSource component for the source code
- */
-export function TranspileSource({
-  children,
-  title = 'Source'
-}: {
-  children: React.ReactNode;
-  title?: string;
-}) {
-  return <div data-transpile-role="source" data-title={title}>{children}</div>;
-}
-
-/**
- * TranspileCompiled component for the compiled code
- */
-export function TranspileCompiled({
-  children,
-  title = 'Compiled'
-}: {
-  children: React.ReactNode;
-  title?: string;
-}) {
-  return <div data-transpile-role="compiled" data-title={title}>{children}</div>;
+  )
 }

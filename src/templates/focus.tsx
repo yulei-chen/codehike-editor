@@ -1,23 +1,25 @@
+/* MDX Snippet:
+```js
+// !focus(1:4)
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
 import { AnnotationHandler, InnerLine } from "codehike/code"
 import { PreWithFocus } from "./focus.client"
 
-/**
- * Focus annotation: dim unfocused code and scroll to focused lines.
- * Usage: // !focus[fromLine:toLine] or // !focus on a line
- * Pass focus handler to Pre; it uses PreWithFocus for scroll behavior.
- */
 export const focus: AnnotationHandler = {
   name: "focus",
   onlyIfAnnotated: true,
   PreWithRef: PreWithFocus,
-  Line: (lineProps) => (
-    <div data-focus={false} className="opacity-100">
-      <InnerLine merge={lineProps} {...lineProps} />
-    </div>
+  Line: (props) => (
+    <InnerLine merge={props} className="opacity-50 data-[focus]:opacity-100 px-2" />
   ),
-  AnnotatedLine: (lineProps) => (
-    <div data-focus="true" className="opacity-100">
-      <InnerLine merge={lineProps} {...lineProps} />
-    </div>
+  AnnotatedLine: ({ annotation, ...props }) => (
+    <InnerLine merge={props} data-focus={true} className="bg-zinc-700/30" />
   ),
 }

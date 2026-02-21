@@ -1,25 +1,28 @@
+/* MDX Snippet:
+```js
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
 import { AnnotationHandler, InnerLine } from "codehike/code"
 
-/**
- * Line numbers annotation handler for Code Hike
- * Usage: enable via code block meta or handler
- * Renders line numbers with width based on total line count.
- */
 export const lineNumbers: AnnotationHandler = {
   name: "line-numbers",
-  Line: (lineProps) => {
-    const width = (lineProps.totalLines?.toString().length ?? 2) + 1
+  Line: (props) => {
+    const width = props.totalLines.toString().length + 1
     return (
-      <div className="flex leading-6">
+      <div className="flex">
         <span
-          className="flex-shrink-0 text-right select-none text-slate-500 font-mono text-sm pr-2"
+          className="text-right opacity-50 select-none"
           style={{ minWidth: `${width}ch` }}
         >
-          {lineProps.lineNumber}
+          {props.lineNumber}
         </span>
-        <span className="flex-1">
-          <InnerLine merge={lineProps} {...lineProps} />
-        </span>
+        <InnerLine merge={props} className="flex-1 pl-2" />
       </div>
     )
   },

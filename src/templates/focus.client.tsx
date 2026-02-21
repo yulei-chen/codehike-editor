@@ -12,7 +12,7 @@ export const PreWithFocus: NonNullable<
 > = (props) => {
   const ref = getPreRef(props)
   useScrollToFocus(ref)
-  return <InnerPre merge={props} {...props} />
+  return <InnerPre merge={props} />
 }
 
 function useScrollToFocus(ref: React.RefObject<HTMLElement | null>) {

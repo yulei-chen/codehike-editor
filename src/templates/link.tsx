@@ -1,23 +1,19 @@
+/* MDX Snippet:
+```js
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  // !link[/ipsum/] https://example.com
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
+
 import { AnnotationHandler } from "codehike/code"
 
-/**
- * Link annotation handler for Code Hike
- * Usage: // !link[/pattern/] https://example.com
- * The annotation query is the href (from block data/query).
- */
 export const link: AnnotationHandler = {
   name: "link",
   Inline: ({ annotation, children }) => {
-    const href = annotation.query ?? (annotation.data as string) ?? "#"
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-400 hover:text-blue-300 underline decoration-dotted underline-offset-2 cursor-pointer"
-      >
-        {children}
-      </a>
-    )
+    const { query } = annotation
+    return <a href={query}>{children}</a>
   },
 }

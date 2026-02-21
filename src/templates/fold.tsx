@@ -1,12 +1,22 @@
+/* MDX Snippet:
+```js
+// !fold[/className="(.*?)"/gm]
+
+function Foo() {
+  return (
+    <div className="bg-red-200 opacity-50">
+      <span className="block">hey</span>
+    </div>
+  )
+}
+```
+*/
+
 "use client"
 
 import { AnnotationHandler } from "codehike/code"
 import { useState } from "react"
 
-/**
- * Inline fold: when folded shows "..." button; when expanded shows children.
- * Usage: // !fold[/pattern/] to fold inline content (e.g. long classNames).
- */
 export const InlineFold: AnnotationHandler["Inline"] = ({ children }) => {
   const [folded, setFolded] = useState(true)
   if (!folded) {
@@ -24,7 +34,4 @@ export const InlineFold: AnnotationHandler["Inline"] = ({ children }) => {
   )
 }
 
-export const fold: AnnotationHandler = {
-  name: "fold",
-  Inline: InlineFold,
-}
+// fold AnnotationHandler is defined in code.tsx (imports InlineFold from here)

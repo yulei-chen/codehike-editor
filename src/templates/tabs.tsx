@@ -1,88 +1,37 @@
 /* MDX Snippet:
-<Tabs>
+<CodeWithTabs>
 
-```js title="JavaScript"
-const greeting = "Hello";
+```js !!tabs main.js
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
 ```
 
-```ts title="TypeScript"
-const greeting: string = "Hello";
+```css !!tabs styles.css
+body {
+  margin: 0;
+  padding: 0;
+}
 ```
 
-</Tabs>
+</CodeWithTabs>
 */
 
-import React, { useState } from 'react';
+import { Block, CodeBlock, parseProps } from "codehike/blocks"
+import { Pre, highlight } from "codehike/code"
+import { z } from "zod"
+import { CodeTabs } from "./tabs.client"
 
-interface Tab {
-  title: string;
-  content: React.ReactNode;
-}
+const Schema = Block.extend({
+  tabs: z.array(CodeBlock),
+})
 
-interface TabsProps {
-  children: React.ReactNode;
-  tabs?: Tab[];
-  defaultTab?: number;
-}
-
-/**
- * Tabs component for tabbed code blocks
- */
-export function Tabs({ children, tabs = [], defaultTab = 0 }: TabsProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
-
-  // Extract tabs from children if not provided directly
-  const extractedTabs: Tab[] =
-    tabs.length > 0
-      ? tabs
-      : React.Children.toArray(children)
-          .filter((child): child is React.ReactElement => React.isValidElement(child))
-          .map((child, index) => ({
-            title: child.props?.title || `Tab ${index + 1}`,
-            content: child
-          }));
-
-  if (extractedTabs.length === 0) {
-    return <>{children}</>;
-  }
-
-  return (
-    <div className="rounded-lg overflow-hidden border border-slate-700">
-      {/* Tab headers */}
-      <div className="flex bg-slate-800 border-b border-slate-700">
-        {extractedTabs.map((tab, index) => (
-          <button
-            key={index}
-            onClick={() => setActiveTab(index)}
-            className={`
-              px-4 py-2 text-sm font-medium transition-colors
-              ${
-                index === activeTab
-                  ? 'bg-slate-900 text-white border-b-2 border-blue-500 -mb-px'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-              }
-            `}
-          >
-            {tab.title}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div className="bg-slate-900">{extractedTabs[activeTab]?.content}</div>
-    </div>
-  );
-}
-
-/**
- * TabPanel component for individual tab content
- */
-export function TabPanel({
-  children,
-  title
-}: {
-  children: React.ReactNode;
-  title: string;
-}) {
-  return <div data-title={title}>{children}</div>;
+export async function CodeWithTabs(props: unknown) {
+  const { tabs } = parseProps(props, Schema)
+  const highlighted = await Promise.all(
+    tabs.map((tab) => highlight(tab, "github-dark")),
+  )
+  return <CodeTabs tabs={highlighted} />
 }

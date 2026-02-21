@@ -1,37 +1,31 @@
-import {
-  AnnotationHandler,
-  InnerLine,
-  BlockAnnotation,
-} from "codehike/code"
+/* MDX Snippet:
+```js
+function lorem(ipsum, dolor = 1) {
+  const sit = ipsum == null ? 0 : ipsum.sit
+  // !diff -
+  dolor = ipsum - sit
+  // !diff +
+  dolor = sit - amet(dolor)
+  return sit ? consectetur(ipsum) : []
+}
+```
+*/
 
-/**
- * Diff annotation handler for Code Hike
- * Usage: lines starting with + or - in code block
- * Transform adds "mark" annotation for border/color; Line prepends +/- icon.
- */
+import { AnnotationHandler, InnerLine, BlockAnnotation } from "codehike/code"
+
 export const diff: AnnotationHandler = {
   name: "diff",
   onlyIfAnnotated: true,
   transform: (annotation: BlockAnnotation) => {
-    const color = annotation.query === "-" ? "#f85149" : "#3fb950"
-    return [
-      annotation,
-      { ...annotation, name: "mark", query: color } as BlockAnnotation,
-    ]
+    const color = annotation.query == "-" ? "#f85149" : "#3fb950"
+    return [annotation, { ...annotation, name: "mark", query: color }]
   },
-  Line: (lineProps) => {
-    const { annotation, ...rest } = lineProps
-    return (
-      <div className="flex leading-6">
-        {annotation?.query != null && (
-          <span className="flex-shrink-0 w-4 select-none text-slate-500 font-mono text-sm">
-            {annotation.query}
-          </span>
-        )}
-        <span className="flex-1">
-          <InnerLine merge={lineProps} {...rest} />
-        </span>
+  Line: ({ annotation, ...props }) => (
+    <>
+      <div className="min-w-[1ch] box-content opacity-70 pl-2 select-none">
+        {annotation?.query}
       </div>
-    )
-  },
+      <InnerLine merge={props} />
+    </>
+  ),
 }

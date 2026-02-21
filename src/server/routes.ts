@@ -193,6 +193,14 @@ export function createRoutes(projectRoot: string): Router {
   // Companion files that must be copied alongside a template
   const COMPANION_FILES: Record<string, string[]> = {
     'focus': ['focus.client.tsx'],
+    'token-transitions': ['smooth-pre.tsx'],
+    'tabs': ['tabs.client.tsx'],
+    'language-switcher': ['language-switcher.client.tsx'],
+  };
+
+  // Templates that require other templates to also be injected
+  const TEMPLATE_DEPENDENCIES: Record<string, string[]> = {
+    'diff': ['mark'],
   };
 
   // POST /api/inject - Inject selected components into user's project
@@ -213,7 +221,18 @@ export function createRoutes(projectRoot: string): Router {
       const skipped: string[] = [];
       const failed: string[] = [];
 
-      for (const componentName of components) {
+      // Expand components list with any required dependencies
+      const allComponents = [...components];
+      for (const name of components) {
+        const normalized = name.toLowerCase().replace(/\s+/g, '-');
+        for (const dep of TEMPLATE_DEPENDENCIES[normalized] || []) {
+          if (!allComponents.some(c => c.toLowerCase().replace(/\s+/g, '-') === dep)) {
+            allComponents.push(dep);
+          }
+        }
+      }
+
+      for (const componentName of allComponents) {
         // Normalize component name to lowercase for file lookup
         const normalizedName = componentName.toLowerCase().replace(/\s+/g, '-');
 
@@ -259,8 +278,8 @@ export function createRoutes(projectRoot: string): Router {
         }
       }
 
-      // All requested component names (including skipped ones)
-      const allRequestedNames = components.map((n: string) => n.toLowerCase().replace(/\s+/g, '-'));
+      // All requested component names (including skipped ones and dependencies)
+      const allRequestedNames = allComponents.map((n: string) => n.toLowerCase().replace(/\s+/g, '-'));
 
       // Auto-create/update code.tsx with annotation handler imports
       const injectedFileNames = injected.map(name => name.toLowerCase().replace(/\s+/g, '-'));

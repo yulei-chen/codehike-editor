@@ -6,6 +6,25 @@ interface HandlerInfo {
   exportNames: string[];
 }
 
+// Handlers whose component is a "use client" export — they must be defined inline
+// in code.tsx (server component) rather than imported as a handler object.
+interface InlineHandlerInfo {
+  importName: string;       // exported from the template file (e.g. InlineFold)
+  fileName: string;         // template file without extension (e.g. fold)
+  handlerName: string;      // variable name used in handlers array (e.g. fold)
+  handlerDefinition: string; // full const ... = { ... } code inserted into code.tsx
+}
+
+const INLINE_HANDLER_REGISTRY: Record<string, InlineHandlerInfo> = {
+  'fold': {
+    importName: 'InlineFold',
+    fileName: 'fold',
+    handlerName: 'fold',
+    handlerDefinition:
+      'const fold: AnnotationHandler = {\n  name: "fold",\n  Inline: InlineFold,\n}',
+  },
+};
+
 interface MdxComponentInfo {
   fileName: string;
   componentName: string;
@@ -13,7 +32,6 @@ interface MdxComponentInfo {
 }
 
 // Templates that export MDX components needing registration in mdx-components.tsx.
-// registerAs is the MDX component name (use the export name itself, or a custom key like "a" for links).
 const MDX_COMPONENT_REGISTRY: Record<string, MdxComponentInfo[]> = {
   'code-mentions': [
     { fileName: 'code-mentions', componentName: 'HoverContainer', registerAs: 'HoverContainer' },
@@ -76,13 +94,25 @@ export async function isHandlerAlreadyAdded(
 
   const exportNames = extractHandlerExports(templateContent);
   if (exportNames.length === 0) {
-    // Not an annotation handler — check if it's a wrapper component already in code.tsx
+    // Check inline handler registry
+    const inlineHandler = INLINE_HANDLER_REGISTRY[normalizedName];
+    if (inlineHandler) {
+      const codeFilePath = join(targetDir, 'code.tsx');
+      try {
+        const codeContent = await fs.readFile(codeFilePath, 'utf-8');
+        return codeContent.includes(inlineHandler.importName);
+      } catch {
+        return false;
+      }
+    }
+
+    // Check wrapper registry
     const wrapper = CODE_WRAPPER_REGISTRY[normalizedName];
     if (wrapper) {
       const codeFilePath = join(targetDir, 'code.tsx');
       try {
         const codeContent = await fs.readFile(codeFilePath, 'utf-8');
-        return codeContent.includes(wrapper.importName);
+        return codeContent.includes(wrapper.marker);
       } catch {
         return false;
       }
@@ -97,8 +127,15 @@ export async function isHandlerAlreadyAdded(
 /**
  * Generate a fresh code.tsx file content from handler info.
  */
-function generateCodeComponent(handlers: HandlerInfo[]): string {
-  const imports = ['import { Pre, RawCode, highlight } from "codehike/code"'];
+function generateCodeComponent(
+  handlers: HandlerInfo[],
+  inlineHandlers: InlineHandlerInfo[] = []
+): string {
+  const needsAnnotationHandler = inlineHandlers.length > 0;
+  const chExports = needsAnnotationHandler
+    ? 'Pre, RawCode, highlight, AnnotationHandler'
+    : 'Pre, RawCode, highlight';
+  const imports = [`import { ${chExports} } from "codehike/code"`];
   const allHandlerNames: string[] = [];
 
   for (const handler of handlers) {
@@ -107,7 +144,15 @@ function generateCodeComponent(handlers: HandlerInfo[]): string {
     allHandlerNames.push(...handler.exportNames);
   }
 
+  for (const ih of inlineHandlers) {
+    imports.push(`import { ${ih.importName} } from "./${ih.fileName}"`);
+    allHandlerNames.push(ih.handlerName);
+  }
+
   const handlersArray = allHandlerNames.join(', ');
+  const inlineHandlerDefs = inlineHandlers
+    .map(h => h.handlerDefinition)
+    .join('\n\n');
 
   return `${imports.join('\n')}
 
@@ -115,17 +160,21 @@ export async function Code({ codeblock }: { codeblock: RawCode }) {
   const highlighted = await highlight(codeblock, "github-dark")
   return <Pre code={highlighted} handlers={[${handlersArray}]} />
 }
-`;
+${inlineHandlerDefs ? '\n' + inlineHandlerDefs + '\n' : ''}`;
 }
 
 /**
  * Update an existing code.tsx file to add new handler imports and handler names.
  */
-function updateCodeComponent(existingContent: string, handlers: HandlerInfo[]): string {
+function updateCodeComponent(
+  existingContent: string,
+  handlers: HandlerInfo[],
+  inlineHandlers: InlineHandlerInfo[] = []
+): string {
   let content = existingContent;
 
+  // Normal annotation handlers
   for (const handler of handlers) {
-    // Check which exports are already imported
     const newExports = handler.exportNames.filter(name => {
       const importRegex = new RegExp(`import\\s*\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from`);
       return !importRegex.test(content);
@@ -133,7 +182,6 @@ function updateCodeComponent(existingContent: string, handlers: HandlerInfo[]): 
 
     if (newExports.length === 0) continue;
 
-    // Add import after the last import line
     const importStatement = `import { ${newExports.join(', ')} } from "./${handler.fileName}"`;
     const lastImportIndex = content.lastIndexOf('\nimport ');
     if (lastImportIndex !== -1) {
@@ -143,7 +191,6 @@ function updateCodeComponent(existingContent: string, handlers: HandlerInfo[]): 
       content = importStatement + '\n' + content;
     }
 
-    // Add handler names to the handlers array
     for (const name of newExports) {
       const handlersPattern = /(handlers[=:]\s*\{?\[)([^\]]*?)(\])/;
       const match = content.match(handlersPattern);
@@ -152,6 +199,43 @@ function updateCodeComponent(existingContent: string, handlers: HandlerInfo[]): 
         const newList = existing ? `${existing}, ${name}` : name;
         content = content.replace(handlersPattern, `$1${newList}$3`);
       }
+    }
+  }
+
+  // Inline handlers (e.g. fold — must be defined locally in code.tsx)
+  for (const ih of inlineHandlers) {
+    if (content.includes(ih.importName)) continue; // already present
+
+    // Add import from template file
+    const importLine = `import { ${ih.importName} } from "./${ih.fileName}"`;
+    const lastImportIndex = content.lastIndexOf('\nimport ');
+    if (lastImportIndex !== -1) {
+      const endOfLine = content.indexOf('\n', lastImportIndex + 1);
+      content = content.slice(0, endOfLine) + '\n' + importLine + content.slice(endOfLine);
+    } else {
+      content = importLine + '\n' + content;
+    }
+
+    // Ensure AnnotationHandler is imported from codehike/code
+    const chImportRegex = /import\s*\{([^}]*)\}\s*from\s*["']codehike\/code["']/;
+    const chMatch = content.match(chImportRegex);
+    if (chMatch && !chMatch[1].includes('AnnotationHandler')) {
+      content = content.replace(
+        chImportRegex,
+        `import {${chMatch[1].trimEnd()}, AnnotationHandler } from "codehike/code"`
+      );
+    }
+
+    // Append handler definition after the file
+    content = content.trimEnd() + '\n\n' + ih.handlerDefinition + '\n';
+
+    // Add handler name to handlers array
+    const handlersPattern = /(handlers[=:]\s*\{?\[)([^\]]*?)(\])/;
+    const match = content.match(handlersPattern);
+    if (match) {
+      const existing = match[2].trim();
+      const newList = existing ? `${existing}, ${ih.handlerName}` : ih.handlerName;
+      content = content.replace(handlersPattern, `$1${newList}$3`);
     }
   }
 
@@ -168,8 +252,17 @@ export async function ensureCodeComponent(
   injectedFileNames: string[]
 ): Promise<'created' | 'updated' | 'unchanged'> {
   const handlers: HandlerInfo[] = [];
+  const inlineHandlers: InlineHandlerInfo[] = [];
 
   for (const fileName of injectedFileNames) {
+    // Check inline handler registry first
+    const inlineHandler = INLINE_HANDLER_REGISTRY[fileName];
+    if (inlineHandler) {
+      inlineHandlers.push(inlineHandler);
+      continue;
+    }
+
+    // Regular annotation handler — extract exports from template
     const templatePath = join(templatesDir, `${fileName}.tsx`);
     try {
       const content = await fs.readFile(templatePath, 'utf-8');
@@ -182,7 +275,7 @@ export async function ensureCodeComponent(
     }
   }
 
-  if (handlers.length === 0) {
+  if (handlers.length === 0 && inlineHandlers.length === 0) {
     return 'unchanged';
   }
 
@@ -196,11 +289,11 @@ export async function ensureCodeComponent(
   }
 
   if (existingContent === null) {
-    const content = generateCodeComponent(handlers);
+    const content = generateCodeComponent(handlers, inlineHandlers);
     await fs.writeFile(codeFilePath, content, 'utf-8');
     return 'created';
   } else {
-    const updated = updateCodeComponent(existingContent, handlers);
+    const updated = updateCodeComponent(existingContent, handlers, inlineHandlers);
     if (updated === existingContent) {
       return 'unchanged';
     }
@@ -210,25 +303,31 @@ export async function ensureCodeComponent(
 }
 
 interface CodeWrapperInfo {
-  fileName: string;
-  importName: string;
-  // Transform applied to code.tsx: wraps the return statement
+  marker: string;      // string to detect if wrapper is already applied to code.tsx
+  importName?: string; // if set, adds: import { importName } from "./fileName"
+  fileName?: string;   // used together with importName
   wrapReturn: (preJsx: string) => string;
 }
 
 // Templates that modify the code.tsx return (wrapping <Pre>), not annotation handlers.
 const CODE_WRAPPER_REGISTRY: Record<string, CodeWrapperInfo> = {
   'copy-button': {
-    fileName: 'copy-button',
+    marker: 'CopyButton',
     importName: 'CopyButton',
+    fileName: 'copy-button',
     wrapReturn: (preJsx: string) =>
       `<div className="relative">\n      <CopyButton text={highlighted.code} />\n      ${preJsx}\n    </div>`,
+  },
+  'file-name': {
+    marker: 'highlighted.meta',
+    wrapReturn: (preJsx: string) =>
+      `<div className="px-4 bg-zinc-950 rounded">\n      <div className="text-center text-zinc-400 text-sm py-2">\n        {highlighted.meta}\n      </div>\n      ${preJsx}\n    </div>`,
   },
 };
 
 /**
- * Ensure code.tsx includes wrapper components (e.g. CopyButton) for requested templates.
- * Adds import and wraps the <Pre> return.
+ * Ensure code.tsx includes wrapper components (e.g. CopyButton, file-name) for requested templates.
+ * Adds import if needed and wraps the <Pre> return.
  */
 export async function ensureCodeWrappers(
   targetDir: string,
@@ -252,23 +351,24 @@ export async function ensureCodeWrappers(
   let changed = false;
 
   for (const wrapper of wrappers) {
-    // Skip if already imported
-    if (content.includes(wrapper.importName)) continue;
+    // Skip if already applied (check marker string)
+    if (content.includes(wrapper.marker)) continue;
 
     changed = true;
 
-    // Add import
-    const importLine = `import { ${wrapper.importName} } from "./${wrapper.fileName}"`;
-    const lastImportIndex = content.lastIndexOf('\nimport ');
-    if (lastImportIndex !== -1) {
-      const endOfLine = content.indexOf('\n', lastImportIndex + 1);
-      content = content.slice(0, endOfLine) + '\n' + importLine + content.slice(endOfLine);
-    } else {
-      content = importLine + '\n' + content;
+    // Add import only if this wrapper needs one
+    if (wrapper.importName && wrapper.fileName) {
+      const importLine = `import { ${wrapper.importName} } from "./${wrapper.fileName}"`;
+      const lastImportIndex = content.lastIndexOf('\nimport ');
+      if (lastImportIndex !== -1) {
+        const endOfLine = content.indexOf('\n', lastImportIndex + 1);
+        content = content.slice(0, endOfLine) + '\n' + importLine + content.slice(endOfLine);
+      } else {
+        content = importLine + '\n' + content;
+      }
     }
 
-    // Wrap the return: find `return <Pre .../>` or `return (\n    <Pre .../>\n  )`
-    // Match return with <Pre .../> (self-closing)
+    // Wrap the return: find `return <Pre .../>`  (self-closing)
     const returnPrePattern = /(return\s*(?:\(\s*)?)(<Pre\b[^]*?\/>)(\s*\)?)/;
     const match = content.match(returnPrePattern);
     if (match) {

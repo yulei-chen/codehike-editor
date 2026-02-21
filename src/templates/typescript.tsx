@@ -1,130 +1,84 @@
 /* MDX Snippet:
-```tsx
-// Hover over types to see TypeScript info
+```ts twoslash
 interface User {
-  name: string;
-  age: number;
+  name: string
+  age: number
 }
 
-function greet(user: User): string {
-  return `Hello, ${user.name}!`;
-}
+const user: User = { name: "Alice", age: 30 }
+//    ^?
 ```
 */
 
-import React, { useState } from 'react';
+import {
+  AnnotationHandler,
+  InlineAnnotation,
+  Pre,
+  RawCode,
+  highlight,
+} from "codehike/code"
+import { createTwoslasher } from "twoslash"
 
-interface TypeInfoProps {
-  children: React.ReactNode;
-  type: string;
-  documentation?: string;
+// Note: Requires twoslash package: npm install twoslash
+// This is a React Server Component (RSC)
+const twoslasher = createTwoslasher()
+
+export async function Code({ codeblock }: { codeblock: RawCode }) {
+  const twoslash = twoslasher(codeblock.value, codeblock.lang)
+  const highlighted = await highlight(codeblock, "github-dark")
+
+  highlighted.annotations = [
+    ...highlighted.annotations,
+    ...twoslash.hovers.map((hover) => ({
+      name: "hover",
+      query: hover.text,
+      fromLineNumber: hover.line + 1,
+      toLineNumber: hover.line + 1,
+      fromColumn: hover.character,
+      toColumn: hover.character + hover.length,
+    })),
+    ...twoslash.queries.map((q) => ({
+      name: "query",
+      query: q.text,
+      fromLineNumber: q.line,
+      toLineNumber: q.line,
+      fromColumn: q.character,
+      toColumn: q.character + 1,
+    })),
+  ]
+
+  return <Pre code={highlighted} handlers={[hover, query]} />
 }
 
-/**
- * TypeInfo component for TypeScript hover information
- */
-export function TypeInfo({
-  children,
-  type,
-  documentation
-}: TypeInfoProps) {
-  const [show, setShow] = useState(false);
-
-  return (
-    <span
-      className="relative inline-block"
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
-    >
-      <span className="cursor-help">{children}</span>
-
-      {show && (
-        <span className="absolute z-50 bottom-full left-0 mb-2 p-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-w-md">
-          <div className="font-mono text-sm text-blue-300">{type}</div>
-          {documentation && (
-            <div className="mt-1 text-sm text-slate-300">{documentation}</div>
-          )}
-        </span>
-      )}
+const hover: AnnotationHandler = {
+  name: "hover",
+  Inline: ({ annotation, children }) => (
+    <span className="group relative">
+      <span className="underline decoration-dotted decoration-zinc-400 cursor-help">
+        {children}
+      </span>
+      <span className="hidden group-hover:block absolute z-10 bottom-full left-0 mb-1 px-2 py-1 bg-zinc-800 border border-zinc-600 rounded text-sm text-zinc-200 whitespace-pre font-mono max-w-sm">
+        {annotation.query}
+      </span>
     </span>
-  );
+  ),
 }
 
-/**
- * TypeHighlight component for type annotations
- */
-export function TypeHighlight({
-  children,
-  isType = false
-}: {
-  children: React.ReactNode;
-  isType?: boolean;
-}) {
-  return (
-    <span className={isType ? 'text-cyan-300' : ''}>
+const query: AnnotationHandler = {
+  name: "query",
+  transform: (annotation: InlineAnnotation) => ({
+    name: annotation.name,
+    query: annotation.query,
+    fromLineNumber: annotation.lineNumber + 1,
+    toLineNumber: annotation.lineNumber + 1,
+    data: annotation.data,
+  }),
+  Block: ({ annotation, children }) => (
+    <>
       {children}
-    </span>
-  );
-}
-
-/**
- * TypeScriptCode wrapper with type hover support
- */
-export function TypeScriptCode({
-  children,
-  typeInfo
-}: {
-  children: React.ReactNode;
-  typeInfo?: Record<string, { type: string; doc?: string }>;
-}) {
-  return (
-    <div className="typescript-code relative">
-      {children}
-      {/* Type info tooltips would be injected here */}
-    </div>
-  );
-}
-
-/**
- * Interface highlight component
- */
-export function InterfaceDefinition({
-  name,
-  children
-}: {
-  name: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="interface-definition">
-      <span className="text-purple-400">interface</span>{' '}
-      <span className="text-cyan-300">{name}</span>
-      {' {'}
-      <div className="pl-4">{children}</div>
-      {'}'}
-    </div>
-  );
-}
-
-/**
- * Property definition in an interface
- */
-export function PropertyDefinition({
-  name,
-  type,
-  optional = false
-}: {
-  name: string;
-  type: string;
-  optional?: boolean;
-}) {
-  return (
-    <div>
-      <span className="text-slate-200">{name}</span>
-      {optional && <span className="text-slate-500">?</span>}
-      <span className="text-slate-500">: </span>
-      <span className="text-cyan-300">{type}</span>
-      <span className="text-slate-500">;</span>
-    </div>
-  );
+      <div className="px-4 py-2 my-1 bg-zinc-800/50 border border-zinc-600 rounded text-sm text-zinc-200 font-mono">
+        {annotation.query}
+      </div>
+    </>
+  ),
 }

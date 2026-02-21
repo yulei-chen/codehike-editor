@@ -1,32 +1,48 @@
+/* MDX Snippet:
+```js
+function lorem(ipsum, dolor = 1) {
+  // !mark
+  return dolor
+}
+
+function ipsum(lorem, dolor = 1) {
+  // !mark(1:2) gold
+  const sit = lorem == null ? 0 : lorem.sit
+  dolor = sit - amet(dolor)
+  // !mark[/sit/] pink
+  return sit ? consectetur(lorem) : []
+}
+```
+*/
+
 import { AnnotationHandler, InnerLine } from "codehike/code"
 
-const defaultColor = "rgb(14 165 233)"
-
-/**
- * Mark annotation handler for Code Hike
- * Usage: // !mark[/pattern/] or // !mark[/pattern/] color (e.g. #hex or rgb())
- * annotation.query is used as optional color for the mark.
- */
 export const mark: AnnotationHandler = {
   name: "mark",
-  Line: (lineProps) => {
-    const { annotation, ...rest } = lineProps
-    const color = annotation?.query || defaultColor
+  Line: ({ annotation, ...props }) => {
+    const color = annotation?.query || "rgb(14 165 233)"
     return (
       <div
-        style={{ backgroundColor: `${color}20`, borderLeft: `2px solid ${color}` }}
-        className="pl-2"
+        className="flex"
+        style={{
+          borderLeft: "solid 2px transparent",
+          borderLeftColor: annotation && color,
+          backgroundColor: annotation && `rgb(from ${color} r g b / 0.1)`,
+        }}
       >
-        <InnerLine merge={lineProps} {...rest} />
+        <InnerLine merge={props} className="px-2 flex-1" />
       </div>
     )
   },
   Inline: ({ annotation, children }) => {
-    const color = annotation?.query || defaultColor
+    const color = annotation?.query || "rgb(14 165 233)"
     return (
       <span
-        style={{ backgroundColor: `${color}40` }}
-        className="rounded px-0.5"
+        className="rounded px-0.5 py-0 -mx-0.5"
+        style={{
+          outline: `solid 1px rgb(from ${color} r g b / 0.5)`,
+          background: `rgb(from ${color} r g b / 0.13)`,
+        }}
       >
         {children}
       </span>
