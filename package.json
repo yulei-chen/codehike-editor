@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "pnpm run build:server && pnpm run build:editor",
-    "build:server": "tsup src/cli/index.ts src/server/index.ts --format esm --dts --outDir dist && cp -r src/templates/ dist/templates",
+    "build:server": "tsup src/cli/index.ts --format esm --dts --outDir dist/cli && tsup src/server/index.ts --format esm --dts --outDir dist/server && cp -r src/templates/ dist/templates",
     "build:editor": "vite build --config src/editor/vite.config.ts",
     "dev": "tsx src/cli/index.ts dev",
     "prepublishOnly": "pnpm run build",
@@ -51,6 +51,7 @@
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.26.3",
     "@uiw/react-codemirror": "^4.21.25",
+    "chokidar": "^5.0.0",
     "commander": "^12.1.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",

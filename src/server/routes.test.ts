@@ -6,6 +6,20 @@ import express from 'express';
 import request from 'supertest';
 import { createRoutes } from './routes.js';
 
+/** demo project structure:
+ *
+ * - demo
+ *   - app
+ *     - components
+ *   - node_modules
+ *     - codehike-editor
+ *       - dist
+ *         - cli
+ *         - editor
+ *         - server
+ *         - templates
+ * */
+
 function createApp(projectRoot: string, templatesDir: string) {
   const app = express();
   app.use(express.json());
@@ -14,24 +28,30 @@ function createApp(projectRoot: string, templatesDir: string) {
 }
 
 describe('routes', () => {
+  let base: string;
   let projectRoot: string;
   let templatesDir: string;
 
   beforeEach(async () => {
-    projectRoot = await fs.mkdtemp(join(tmpdir(), 'ch-routes-'));
-    templatesDir = await fs.mkdtemp(join(tmpdir(), 'ch-tpl-'));
+    base = await fs.mkdtemp(join(tmpdir(), 'ch-routes-'));
+    projectRoot = join(base, 'demo');
+    const distPath = join(projectRoot, 'node_modules', 'codehike-editor', 'dist');
+    templatesDir = join(distPath, 'templates');
+
+    await fs.mkdir(join(projectRoot, 'app', 'components'), { recursive: true });
+    await fs.mkdir(join(distPath, 'cli'), { recursive: true });
+    await fs.mkdir(join(distPath, 'editor'), { recursive: true });
+    await fs.mkdir(join(distPath, 'server'), { recursive: true });
+    await fs.mkdir(templatesDir, { recursive: true });
   });
 
   afterEach(async () => {
-    await fs.rm(projectRoot, { recursive: true, force: true });
-    await fs.rm(templatesDir, { recursive: true, force: true });
+    await fs.rm(base, { recursive: true, force: true });
   });
 
   describe('GET /api/files', () => {
     it('returns MDX files from app/ dir', async () => {
-      const appDir = join(projectRoot, 'app');
-      await fs.mkdir(appDir, { recursive: true });
-      await fs.writeFile(join(appDir, 'page.mdx'), '# Hello', 'utf-8');
+      await fs.writeFile(join(projectRoot, 'app', 'page.mdx'), '# Hello', 'utf-8');
 
       const app = createApp(projectRoot, templatesDir);
       const res = await request(app).get('/api/files');
@@ -42,6 +62,8 @@ describe('routes', () => {
     });
 
     it('handles missing app/ dir', async () => {
+      await fs.rm(join(projectRoot, 'app'), { recursive: true, force: true });
+
       const app = createApp(projectRoot, templatesDir);
       const res = await request(app).get('/api/files');
 
@@ -53,9 +75,7 @@ describe('routes', () => {
 
   describe('GET /api/file/*', () => {
     it('reads file content', async () => {
-      const appDir = join(projectRoot, 'app');
-      await fs.mkdir(appDir, { recursive: true });
-      await fs.writeFile(join(appDir, 'page.mdx'), '# Hello', 'utf-8');
+      await fs.writeFile(join(projectRoot, 'app', 'page.mdx'), '# Hello', 'utf-8');
 
       const app = createApp(projectRoot, templatesDir);
       const res = await request(app).get('/api/file/app/page.mdx');
@@ -77,9 +97,6 @@ describe('routes', () => {
 
   describe('PUT /api/file/*', () => {
     it('writes file content', async () => {
-      const appDir = join(projectRoot, 'app');
-      await fs.mkdir(appDir, { recursive: true });
-
       const app = createApp(projectRoot, templatesDir);
       const res = await request(app)
         .put('/api/file/app/page.mdx')

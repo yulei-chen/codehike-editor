@@ -1,19 +1,23 @@
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createServer as createViteServer } from 'vite';
+import { exec } from 'child_process';
+import express from 'express';
+import { watch } from 'chokidar';
 import { createServer } from '../server/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const packageRoot = join(__dirname, '..', '..');
-const editorRoot = join(packageRoot, 'src', 'editor');
+const editorDistPath = join(packageRoot, 'dist', 'editor');
+const srcPath = join(packageRoot, 'src');
 
 export interface ServerOptions {
   port: string;
 }
 
-function listen(app: ReturnType<typeof createServer>, port: number, command: string) {
+function listen(app: express.Express, port: number, command: string) {
   const server = app.listen(port, () => {
     console.log(`\n  codehike-editor running at:\n`);
     console.log(`  ➜  Local:   http://localhost:${port}/\n`);
@@ -32,40 +36,69 @@ function listen(app: ReturnType<typeof createServer>, port: number, command: str
   return server;
 }
 
-/** Development: Vite + HMR from source. Use when linked for local dev. */
+/** Development: serve pre-built editor with file watching and auto-rebuild. */
 export async function dev(options: ServerOptions) {
   const port = parseInt(options.port, 10);
   const projectRoot = process.cwd();
 
-  console.log('Starting codehike-editor (dev mode with HMR)...\n');
+  if (!existsSync(join(editorDistPath, 'index.html'))) {
+    console.error('\n  Error: Pre-built editor not found.\n');
+    console.error('  If you installed from npm, reinstall the package.\n');
+    console.error('  If you are developing locally, run: pnpm run build\n');
+    process.exit(1);
+  }
+
+  console.log('Starting codehike-editor...\n');
 
   const app = createServer(projectRoot);
-  const vite = await createViteServer({
-    root: editorRoot,
-    configFile: join(editorRoot, 'vite.config.ts'),
-    server: {
-      middlewareMode: true,
-      hmr: {
-        port: port + 1
-      }
-    },
-    appType: 'spa',
-    define: {
-      'import.meta.env.VITE_PROJECT_ROOT': JSON.stringify(projectRoot)
-    }
+  app.use(express.static(editorDistPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(join(editorDistPath, 'index.html'));
   });
-  app.use(vite.middlewares);
 
   const server = listen(app, port, 'dev');
 
+  let building = false;
+  let pendingBuild = false;
+
+  function rebuild() {
+    if (building) {
+      pendingBuild = true;
+      return;
+    }
+    building = true;
+    console.log('\n  Rebuilding...');
+    exec('pnpm run build', { cwd: packageRoot }, (error, _stdout, stderr) => {
+      if (error) {
+        console.error('\n  Build failed:\n');
+        console.error(stderr || error.message);
+      } else {
+        console.log('  Build complete.\n');
+      }
+      building = false;
+      if (pendingBuild) {
+        pendingBuild = false;
+        rebuild();
+      }
+    });
+  }
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  const watcher = watch(srcPath, { ignoreInitial: true });
+  watcher.on('change', () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(rebuild, 300);
+  });
+
+  console.log('  Watching for changes in src...\n');
+
   const shutdown = async () => {
-    await vite.close();
+    console.log('\nShutting down...');
+    await watcher.close();
     server.close();
     process.exit(0);
   };
-  process.on('SIGINT', async () => {
-    console.log('\nShutting down...');
-    await shutdown();
-  });
+
+  process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 }
