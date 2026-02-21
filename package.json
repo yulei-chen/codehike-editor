@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "build": "pnpm run build:server && pnpm run build:editor",
-    "build:server": "tsup src/cli/index.ts --format esm --dts --outDir dist/cli && tsup src/server/index.ts --format esm --dts --outDir dist/server && cp -r src/templates/ dist/templates && cp README.md dist/README.md",
+    "build:server": "tsup src/cli/index.ts --format esm --dts --outDir dist/cli && tsup src/server/index.ts --format esm --dts --outDir dist/server && cp -r src/templates/ dist/templates",
     "build:editor": "vite build --config src/editor/vite.config.ts",
     "dev": "tsx src/cli/index.ts dev",
     "prepublishOnly": "pnpm run build",
