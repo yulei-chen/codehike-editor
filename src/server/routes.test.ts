@@ -131,6 +131,110 @@ describe('routes', () => {
     });
   });
 
+  describe('POST /api/inject', () => {
+    const HANDLER_TEMPLATE = 'export const Focus: AnnotationHandler = { name: "focus" }';
+
+    it('returns 400 when components is not an array', async () => {
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: 'Focus' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('copies template file to app/components/', async () => {
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.injected).toContain('Focus');
+      const copied = await fs.readFile(join(projectRoot, 'app', 'components', 'focus.tsx'), 'utf-8');
+      expect(copied).toBe(HANDLER_TEMPLATE);
+    });
+
+    it('creates code.tsx for annotation handler templates', async () => {
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.codeTsx).toBe('created');
+      const codeTsx = await fs.readFile(join(projectRoot, 'app', 'components', 'code.tsx'), 'utf-8');
+      expect(codeTsx).toContain('Focus');
+    });
+
+    it('updates code.tsx when it already exists', async () => {
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+      await fs.writeFile(
+        join(projectRoot, 'app', 'components', 'code.tsx'),
+        'import { Pre, RawCode, highlight } from "codehike/code"\n\nexport async function Code({ codeblock }: { codeblock: RawCode }) {\n  const highlighted = await highlight(codeblock, "github-dark")\n  return <Pre code={highlighted} handlers={[]} />\n}\n',
+        'utf-8'
+      );
+
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.codeTsx).toBe('updated');
+      const codeTsx = await fs.readFile(join(projectRoot, 'app', 'components', 'code.tsx'), 'utf-8');
+      expect(codeTsx).toContain('Focus');
+    });
+
+    it('skips component already present in code.tsx', async () => {
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+      await fs.writeFile(
+        join(projectRoot, 'app', 'components', 'code.tsx'),
+        'import { Focus } from "./focus"\nexport async function Code() { return <Pre handlers={[Focus]} /> }',
+        'utf-8'
+      );
+
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Focus'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.skipped).toContain('Focus');
+      expect(res.body.injected).toHaveLength(0);
+    });
+
+    it('adds to failed when template is not found', async () => {
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Unknown'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.failed).toContain('Unknown');
+      expect(res.body.injected).toHaveLength(0);
+    });
+
+    it('copies companion files alongside template', async () => {
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+      await fs.writeFile(join(templatesDir, 'focus.client.tsx'), '// focus client', 'utf-8');
+
+      const app = createApp(projectRoot, templatesDir);
+      await request(app).post('/api/inject').send({ components: ['Focus'] });
+
+      const companion = await fs.readFile(join(projectRoot, 'app', 'components', 'focus.client.tsx'), 'utf-8');
+      expect(companion).toBe('// focus client');
+    });
+
+    it('handles multiple components in one request', async () => {
+      const MARK_TEMPLATE = 'export const Mark: AnnotationHandler = { name: "mark" }';
+      await fs.writeFile(join(templatesDir, 'focus.tsx'), HANDLER_TEMPLATE, 'utf-8');
+      await fs.writeFile(join(templatesDir, 'mark.tsx'), MARK_TEMPLATE, 'utf-8');
+
+      const app = createApp(projectRoot, templatesDir);
+      const res = await request(app).post('/api/inject').send({ components: ['Focus', 'Mark'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.injected).toContain('Focus');
+      expect(res.body.injected).toContain('Mark');
+      const codeTsx = await fs.readFile(join(projectRoot, 'app', 'components', 'code.tsx'), 'utf-8');
+      expect(codeTsx).toContain('Focus');
+      expect(codeTsx).toContain('Mark');
+    });
+  });
+
   describe('GET /api/templates', () => {
     it('lists code and layout templates', async () => {
       await fs.writeFile(join(templatesDir, 'focus.tsx'), '', 'utf-8');
