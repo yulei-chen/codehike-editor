@@ -29,7 +29,7 @@ export function Slideshow({
     slides.length > 0
       ? slides
       : React.Children.toArray(children)
-          .filter((child): child is React.ReactElement => React.isValidElement(child))
+          .filter((child): child is React.ReactElement<{ title?: string }> => React.isValidElement(child))
           .map((child) => ({
             title: child.props?.title,
             content: child

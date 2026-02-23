@@ -52,7 +52,7 @@ export async function dev(options: ServerOptions) {
 
   const app = createServer(projectRoot);
   app.use(express.static(editorDistPath));
-  app.get('*', (_req, res) => {
+  app.get('/{*path}', (_req, res) => {
     res.sendFile(join(editorDistPath, 'index.html'));
   });
 

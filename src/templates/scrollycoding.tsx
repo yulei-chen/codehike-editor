@@ -55,7 +55,7 @@ export function Scrollycoding({ children, steps = [] }: ScrollycodingProps) {
         {extractedSteps.map((step, index) => (
           <div
             key={index}
-            ref={(el) => (stepRefs.current[index] = el)}
+            ref={(el) => { stepRefs.current[index] = el; }}
             className={`
               min-h-[60%] py-8 transition-opacity duration-300
               ${index === activeStep ? 'opacity-100' : 'opacity-40'}

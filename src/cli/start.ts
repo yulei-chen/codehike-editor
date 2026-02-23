@@ -49,7 +49,7 @@ export async function start(options: StartOptions) {
 
   const app = createServer(projectRoot);
   app.use(express.static(editorDistPath));
-  app.get('*', (_req, res) => {
+  app.get('/{*path}', (_req, res) => {
     res.sendFile(join(editorDistPath, 'index.html'));
   });
 

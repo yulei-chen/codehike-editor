@@ -110,9 +110,9 @@ export function createRoutes(projectRoot: string): Router {
   });
 
   // GET /api/file/:path - Read file content
-  router.get('/file/*', async (req: Request, res: Response) => {
+  router.get('/file/*filePath', async (req: Request, res: Response) => {
     try {
-      const filePath = req.params[0];
+      const filePath = req.params.filePath as string;
       if (!filePath) {
         return res.status(400).json({ error: 'File path required' });
       }
@@ -133,9 +133,9 @@ export function createRoutes(projectRoot: string): Router {
   });
 
   // PUT /api/file/:path - Write file content
-  router.put('/file/*', async (req: Request, res: Response) => {
+  router.put('/file/*filePath', async (req: Request, res: Response) => {
     try {
-      const filePath = req.params[0];
+      const filePath = req.params.filePath as string;
       if (!filePath) {
         return res.status(400).json({ error: 'File path required' });
       }
@@ -353,7 +353,7 @@ export function createRoutes(projectRoot: string): Router {
   // GET /api/template/:type/:name - Get template content and snippet
   router.get('/template/:type/:name', async (req: Request, res: Response) => {
     try {
-      const { type, name } = req.params;
+      const { type, name } = req.params as { type: string; name: string };
 
       if (!['code', 'layouts'].includes(type)) {
         return res.status(400).json({ error: 'Invalid template type' });
