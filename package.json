@@ -1,6 +1,6 @@
 {
   "name": "codehike-editor",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Visual editor for Code Hike-powered MDX content",
   "type": "module",
   "bin": {
