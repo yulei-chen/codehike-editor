@@ -198,11 +198,15 @@ export function createRoutes(projectRoot: string): Router {
     'token-transitions': ['smooth-pre.tsx'],
     'tabs': ['tabs.client.tsx'],
     'language-switcher': ['language-switcher.client.tsx'],
+    'slideshow': ['slideshow.client.tsx'],
   };
 
   // Templates that require other templates to also be injected
   const TEMPLATE_DEPENDENCIES: Record<string, string[]> = {
     'diff': ['mark'],
+    'scrollycoding': ['token-transitions'],
+    'slideshow': ['token-transitions'],
+    'spotlight': ['token-transitions'],
   };
 
   // POST /api/inject - Inject selected components into user's project

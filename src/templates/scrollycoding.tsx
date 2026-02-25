@@ -1,137 +1,72 @@
-import React, { useState, useEffect, useRef } from 'react';
+/* MDX Snippet:
+## !!steps Step One
 
-interface Step {
-  content: React.ReactNode;
-  code: React.ReactNode;
+Content for step one. Scroll down to see the code update.
+
+```js ! example.js
+function hello() {
+  return "world"
 }
+```
 
-interface ScrollycodingProps {
-  children: React.ReactNode;
-  steps?: Step[];
+## !!steps Step Two
+
+Content for step two.
+
+```js ! example.js
+function hello(name) {
+  return `Hello ${name}`
 }
+```
+*/
 
-/**
- * Scrollycoding layout component
- * Shows content on the left that scrolls, with code on the right that updates
- */
-export function Scrollycoding({ children, steps = [] }: ScrollycodingProps) {
-  const [activeStep, setActiveStep] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+import { z } from "zod"
+import { Block, CodeBlock, parseRoot } from "codehike/blocks"
+import { Pre, RawCode, highlight } from "codehike/code"
+import { Selection, SelectionProvider, Selectable } from "codehike/utils/selection"
+import { tokenTransitions } from "./token-transitions"
 
-  // Extract steps from children if not provided
-  const extractedSteps = steps.length > 0 ? steps : extractStepsFromChildren(children);
+const Schema = Block.extend({
+  steps: z.array(Block.extend({ code: CodeBlock })),
+})
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = stepRefs.current.indexOf(entry.target as HTMLDivElement);
-            if (index !== -1) {
-              setActiveStep(index);
-            }
-          }
-        });
-      },
-      {
-        root: containerRef.current,
-        rootMargin: '-40% 0px -40% 0px',
-        threshold: 0
-      }
-    );
-
-    stepRefs.current.forEach((ref) => {
-      if (ref) observer.observe(ref);
-    });
-
-    return () => observer.disconnect();
-  }, [extractedSteps.length]);
-
+export function Scrollycoding({ content }: { content: any }) {
+  const { steps } = parseRoot(content, Schema)
   return (
-    <div ref={containerRef} className="flex h-[600px] rounded-lg border border-slate-700 overflow-hidden">
-      {/* Scrollable content on the left */}
-      <div className="w-1/2 overflow-y-auto p-6 bg-slate-900">
-        {extractedSteps.map((step, index) => (
-          <div
-            key={index}
-            ref={(el) => { stepRefs.current[index] = el; }}
-            className={`
-              min-h-[60%] py-8 transition-opacity duration-300
-              ${index === activeStep ? 'opacity-100' : 'opacity-40'}
-            `}
+    <SelectionProvider className="flex gap-4">
+      <div className="flex-1 mt-32 mb-[90vh] ml-2 prose prose-invert">
+        {steps.map((step, i) => (
+          <Selectable
+            key={i}
+            index={i}
+            selectOn={["click", "scroll"]}
+            className="border-l-4 border-zinc-700 data-[selected=true]:border-blue-400 px-5 py-2 mb-24 rounded bg-zinc-900"
           >
-            {step.content}
-          </div>
+            <h2 className="mt-4 text-xl">{step.title}</h2>
+            <div>{step.children}</div>
+          </Selectable>
         ))}
       </div>
-
-      {/* Sticky code on the right */}
-      <div className="w-1/2 bg-slate-800 border-l border-slate-700 p-4 sticky top-0">
-        <div className="h-full flex items-center justify-center">
-          <div className="w-full">
-            {extractedSteps[activeStep]?.code}
-          </div>
+      <div className="w-[40vw] max-w-xl bg-zinc-900">
+        <div className="top-16 sticky overflow-auto">
+          <Selection
+            from={steps.map((step) => (
+              <Code codeblock={step.code} />
+            ))}
+          />
         </div>
       </div>
-    </div>
-  );
+    </SelectionProvider>
+  )
 }
 
-/**
- * ScrollycodingStep component for individual steps
- */
-export function ScrollycodingStep({
-  children,
-  code
-}: {
-  children: React.ReactNode;
-  code: React.ReactNode;
-}) {
+async function Code({ codeblock }: { codeblock: RawCode }) {
+  const highlighted = await highlight(codeblock, "github-dark")
   return (
-    <div data-scrollycoding-step>
-      <div data-step-content>{children}</div>
-      <div data-step-code>{code}</div>
-    </div>
-  );
-}
-
-/**
- * Extract steps from MDX children
- */
-function extractStepsFromChildren(children: React.ReactNode): Step[] {
-  const steps: Step[] = [];
-  const childArray = React.Children.toArray(children);
-
-  let currentContent: React.ReactNode[] = [];
-  let currentCode: React.ReactNode = null;
-
-  childArray.forEach((child) => {
-    if (React.isValidElement(child)) {
-      // Check if it's a code block
-      if (
-        child.type === 'pre' ||
-        (typeof child.type === 'string' && child.type === 'pre')
-      ) {
-        currentCode = child;
-        steps.push({
-          content: <>{currentContent}</>,
-          code: currentCode
-        });
-        currentContent = [];
-        currentCode = null;
-      } else {
-        currentContent.push(child);
-      }
-    } else {
-      currentContent.push(child);
-    }
-  });
-
-  // Handle any remaining content
-  if (currentContent.length > 0 && steps.length > 0) {
-    // Append to last step if no new code
-  }
-
-  return steps;
+    <Pre
+      code={highlighted}
+      handlers={[tokenTransitions]}
+      className="min-h-[40rem]"
+    />
+  )
 }
