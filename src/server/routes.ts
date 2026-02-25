@@ -112,7 +112,8 @@ export function createRoutes(projectRoot: string): Router {
   // GET /api/file/:path - Read file content
   router.get('/file/*filePath', async (req: Request, res: Response) => {
     try {
-      const filePath = req.params.filePath as string;
+      const rawPath = req.params.filePath;
+      const filePath = Array.isArray(rawPath) ? rawPath.join('/') : rawPath as string;
       if (!filePath) {
         return res.status(400).json({ error: 'File path required' });
       }
@@ -135,7 +136,8 @@ export function createRoutes(projectRoot: string): Router {
   // PUT /api/file/:path - Write file content
   router.put('/file/*filePath', async (req: Request, res: Response) => {
     try {
-      const filePath = req.params.filePath as string;
+      const rawPath = req.params.filePath;
+      const filePath = Array.isArray(rawPath) ? rawPath.join('/') : rawPath as string;
       if (!filePath) {
         return res.status(400).json({ error: 'File path required' });
       }
